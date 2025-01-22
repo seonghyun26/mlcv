@@ -1,0 +1,44 @@
+name: vde
+input_dim: 45
+model: {
+  n_cvs: 4,
+  encoder_layers: [45, 32, 32, 32],
+  options: {
+    encoder: {
+      activation: "tanh",
+      last_layer_activation: {
+      }
+    },
+    decoder: {
+      activation: "tanh"
+    },
+    norm_in: {
+    },
+  }
+}
+data:
+  dir: /home/shpark/prj-cmd/data
+  molecule: alanine
+  temperature: 300.0
+  version: timelag-1n-v1
+  input: distance
+  atom: 22
+trainer:
+  early_stopping: {
+    monitor: "valid_loss",
+    min_delta: 0.1,
+    patience: 50
+  }
+  logger:
+    name: wandb
+    project: clcv-baseline
+    log_model: False
+    tags:
+    - baseline
+  params: {
+    callbacks: ["metrics", "early_stopping"],
+    max_epochs: 2000,
+    logger: None,
+    enable_checkpointing: False
+  }
+checkpoint_name: vde-10n

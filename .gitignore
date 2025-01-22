@@ -2,6 +2,7 @@ lightning_logs/
 outputs/
 wandb/
 __pycache__/
+mlcolvar/
 
 *.pt
 *.npy

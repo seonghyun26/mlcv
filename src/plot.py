@@ -32,9 +32,9 @@ def plot_ad_cv(
     cv_list = []
     if cfg.name == "deeplda" or cfg.name == "deeptda":
         cv_dim = 1
-    elif cfg.name == "deeptica":
+    elif cfg.name in ["deeptica", "vde"]:
         cv_dim = cfg.model["n_cvs"]
-    elif cfg.name in ["autoencoder", "timelagged-autoencoder", "clcv"]:
+    elif cfg.name in ["autoencoder", "timelagged-autoencoder", "vde", "clcv"]:
         cv_dim = cfg.model["encoder_layers"][-1]
     else:
         raise ValueError(f"Model {cfg.name} not found")
@@ -57,7 +57,8 @@ def plot_ad_cv(
     # Scaling for some cases
     if cfg.name == "deeptda":
         cv_list = cv_list / cfg.output_scale
-    elif cfg.name in ["deeptica", "autoencoder", "timelagged-autoencoder"]:
+    elif cfg.name in ["deeptica", "autoencoder", "timelagged-autoencoder", "vde"]:
+        print(f"CV range: {cv_list.min()} ~ {cv_list.max()}")
         cv_list = map_range(cv_list, cv_list.min(), cv_list.max())
     
     df = pd.DataFrame({

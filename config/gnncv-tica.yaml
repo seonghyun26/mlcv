@@ -1,0 +1,44 @@
+name: gnncv-tica
+input_dim: 45
+n_cvs: 1
+cutoff: 10
+atomic_numbers: [6, 7, 8]
+model: {
+    'n_out': 6,
+    'n_bases': 10,
+    'n_polynomials': 6,
+    'n_layers': 2,
+    'n_messages': 2,
+    'n_feedforwards': 2,
+    'n_scalars_node': 6,
+    'n_vectors_node': 2,
+    'n_scalars_edge': 6,
+    'drop_rate': 0.0,
+    'activation': 'Tanh',
+}
+data:
+  dir: /home/shpark/prj-cmd/data
+  molecule: alanine
+  temperature: 300.0
+  version: graph-1n-v1
+  input: distance
+  atom: 22
+trainer:
+  early_stopping: {
+    monitor: "train_loss",
+    patience: 20,
+    min_delta: 0.001,
+  }
+  optimizer: {
+        'optimizer': {'lr': 3E-3, 'weight_decay': 2E-4},
+        'lr_scheduler': {
+            'scheduler': torch.optim.lr_scheduler.ExponentialLR,
+            'gamma': 0.9995
+        }
+    }
+  logger:
+    name: wandb
+    project: clcv-baseline
+    log_model: False
+    tags:
+    - baseline

@@ -7,14 +7,12 @@ from torch import optim
 from omegaconf import DictConfig, OmegaConf, open_dict
 
 from mlcolvar.cvs import DeepLDA, DeepTDA, DeepTICA
-from mlcolvar.cvs import VariationalAutoEncoderCV
 from mlcolvar.data import DictDataset, DictModule
-from mlcolvar.core.transform import Normalization
 
 from .util import *
 from .dataset import *
-from .model import CLCV, AutoEncoderCV
-# from mlcolvar.cvs import AutoEncoderCV
+from .model import CLCV, AutoEncoderCV, VariationalDynamicsEncoder
+
 
 model_dict = {
     "clcv": CLCV,
@@ -23,7 +21,7 @@ model_dict = {
     "deeptica": DeepTICA,
     "autoencoder": AutoEncoderCV,
     "timelagged-autoencoder": AutoEncoderCV,
-    "vae": VariationalAutoEncoderCV
+    "vde": VariationalDynamicsEncoder
 }
 
 ALDP_PHI_ANGLE = [4, 6, 8, 14]
@@ -42,6 +40,28 @@ def load_model(cfg):
     
     elif cfg.name in model_dict:
         model = model_dict[cfg.name](**cfg.model)
+    
+    elif cfg.name == "gnncv-tica":
+        import mlcolvar.graph as mg
+        mg.utils.torch_tools.set_default_dtype('float32')
+        model = mg.cvs.GraphDeepTICA(
+            n_cvs=cfg.n_cvs,
+            cutoff=cfg.cutoff,
+            atomic_numbers=cfg.atomic_numbers,
+            model_options=dict(cfg.model),
+            optimizer_options=dict(cfg.trainer.optimizer),
+        )
+        
+    elif cfg.name == "gnncv-tda":
+        import mlcolvar.graph as mg
+        mg.utils.torch_tools.set_default_dtype('float32')
+        model = mg.cvs.GraphDeepTDA(
+            n_cvs=cfg.n_cvs,
+            cutoff=cfg.cutoff,
+            atomic_numbers=cfg.atomic_numbers,
+            model_options=dict(cfg.model),
+            optimizer_options=dict(cfg.trainer.optimizer),
+        )
     
     else:
         raise ValueError(f"Model {cfg.name} not found")
@@ -112,19 +132,6 @@ def load_data(cfg):
         custom_data = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/cl-xyz-aligned.pt")
         custom_data_lag = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/cl-xyz-aligned-timelag.pt")
         
-        # # Preprocessing 
-        # # 1. mean-free cooridnates
-        # current_state_normalized = current_state - torch.mean(current_state, dim=0)
-        # time_lagged_state_normalized = time_lagged_state - torch.mean(time_lagged_state, dim=0)
-        # # 2. Whitening with C matrix
-        # from scipy.linalg import fractional_matrix_power 
-        # matrix_cov_00 = current_state_normalized.T @ current_state_normalized / data_num
-        # matrix_cov_tau = time_lagged_state_normalized.T @ time_lagged_state_normalized / data_num
-        # matrix_cov_00_pow_minus_half = fractional_matrix_power(matrix_cov_00, -0.5)
-        # matrix_cov_tau_pow_minus_half = fractional_matrix_power(matrix_cov_tau, -0.5)
-        # current_state_whitened = current_state_normalized @ torch.Tensor(matrix_cov_00_pow_minus_half, device=current_state_normalized.device).T
-        # time_lagged_state_whitened = time_lagged_state_normalized @ torch.Tensor(matrix_cov_tau_pow_minus_half, device=time_lagged_state_normalized.device).T
-        
         backbone_atom_data = custom_data[:, ALANINE_HEAVY_ATOM_IDX]
         backbone_atom_data_lag = custom_data_lag[:, ALANINE_HEAVY_ATOM_IDX]
         backbone_atom_data_lag.requires_grad = True
@@ -134,8 +141,25 @@ def load_data(cfg):
         })
         datamodule = DictModule(custom_dataset,lengths=[0.8,0.2])
     
-    elif cfg.name == "vae":
-        pass
+    elif cfg.name in ["gnncv-tica", "gnncv-tda"]:
+        import mlcolvar.graph as mg
+        mg.utils.torch_tools.set_default_dtype('float32')
+        dataset = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/graph-dataset.pt")
+        datasets = mg.utils.timelagged.create_timelagged_datasets(
+            dataset, lag_time=2
+        )
+        datamodule = mg.data.GraphCombinedDataModule(
+            datasets, random_split=False, batch_size=5000
+        )
+    
+    elif cfg.name == "vde":
+        custom_data = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/cl-distance.pt")
+        custom_data_lag = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/cl-distance-timelag.pt")
+        dataset = DictDataset({
+            "data": custom_data,
+            "target": custom_data_lag,
+        })
+        datamodule = DictModule(dataset,lengths=[0.8,0.2])
     
     else:
         raise ValueError(f"Data not found for model {cfg.name}")

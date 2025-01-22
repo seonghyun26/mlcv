@@ -3,6 +3,8 @@ import lightning
 
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim import Adam
+
 from mlcolvar.cvs import BaseCV, AutoEncoderCV, VariationalAutoEncoderCV
 from mlcolvar.core import FeedForward, Normalization
 from mlcolvar.core.transform.utils import Inverse
@@ -10,21 +12,26 @@ from mlcolvar.core.transform.utils import Inverse
 
 __all__ = ["CLCV"]
 
-# class AutoEncoderCV(AutoEncoderCV):
-#     def optimizer_step(
-#         self,
-#         epoch,
-#         batch_idx,
-#         optimizer,
-#         optimizer_closure,
-#     ):
-#         optimizer = optimizer.optimizer
-#         optimizer.step(closure=optimizer_closure)
-        
+class AutoEncoderCV(AutoEncoderCV):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.optimizer = Adam(self.parameters(), lr=1e-3)
+
+    def optimizer_step(
+        self,
+        epoch,
+        batch_idx,
+        optimizer,
+        optimizer_closure,
+    ):
+        optimizer = self.optimizer
+        optimizer.step(closure=optimizer_closure)
+
+    def backward(self, loss):
+        loss.backward(retain_graph=True)
 
 class CLCV(BaseCV, lightning.LightningModule):
     BLOCKS = ["norm_in", "encoder",]
-
 
     def __init__(
         self,
@@ -65,8 +72,6 @@ class CLCV(BaseCV, lightning.LightningModule):
         o = "encoder"
         self.encoder = FeedForward(encoder_layers, **options[o])
 
-
-
     def forward_cv(self, x: torch.Tensor) -> torch.Tensor:
         """Evaluate the CV without pre or post/processing modules."""
         if self.norm_in is not None:
@@ -74,14 +79,10 @@ class CLCV(BaseCV, lightning.LightningModule):
         x = self.encoder(x)
         return x
 
-
-
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         x = self.forward_cv(x)
         # normalized_data = F.normalize(x, p=2, dim=1)
         return x
-
-
 
     def training_step(self, train_batch, batch_idx):
         """Compute and return the training loss and record metrics."""
@@ -102,8 +103,6 @@ class CLCV(BaseCV, lightning.LightningModule):
         name = "train" if self.training else "valid"
         self.log(f"{name}_loss", loss, on_epoch=True)
         return loss
-
-
 
 
 if __name__ == "__main__":

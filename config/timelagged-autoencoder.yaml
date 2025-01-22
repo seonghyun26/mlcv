@@ -1,13 +1,14 @@
 name: timelagged-autoencoder
+input_dim: 30
 model: {
-  encoder_layers: [30, 100, 100, 2],
+  encoder_layers: [30, 100, 100, 1],
   options: {
     encoder: {
-      activation: "leakyrelu",
+      activation: "tanh",
       dropout: [0.5, 0.5, 0.5]
     },
     decoder: {
-      activation: "leakyrelu"
+      activation: "tanh"
     },
     norm_in: {
     }
@@ -17,7 +18,7 @@ data:
   dir: /home/shpark/prj-cmd/data
   molecule: alanine
   temperature: 300.0
-  version: tae-10n-v1
+  version: timelag-1n-v1
   input: coordinate
   atom: 22
 trainer:

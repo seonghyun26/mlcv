@@ -17,6 +17,11 @@ ALDP_PHI_ANGLE = [4, 6, 8, 14]
 ALDP_PSI_ANGLE = [6, 8, 14, 16]
 
 
+def map_range(x, in_min, in_max):
+    out_max = 1
+    out_min = -1
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+
 def plot_ad_cv(
     cfg,
     model,
@@ -34,11 +39,13 @@ def plot_ad_cv(
     else:
         raise ValueError(f"Model {cfg.name} not found")
     
+    # Load data
     projection_dataset = datamodule.dataset["data"]
     data_dir = f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}"
     psi_list = np.load(f"{data_dir}/psi.npy")
     phi_list = np.load(f"{data_dir}/phi.npy")
     
+    # Compute CV
     for data in tqdm(
         projection_dataset,
         desc = f"Computing CVs for {cfg.name}"
@@ -46,9 +53,12 @@ def plot_ad_cv(
         cv = model(data)
         cv_list.append(cv)
     cv_list = torch.stack(cv_list)
+    
     # Scaling for some cases
     if cfg.name == "deeptda":
         cv_list = cv_list / cfg.output_scale
+    elif cfg.name in ["deeptica", "autoencoder", "timelagged-autoencoder"]:
+        cv_list = map_range(cv_list, cv_list.min(), cv_list.max())
     
     df = pd.DataFrame({
         **{f'CV{i}': cv_list[:, i].detach().cpu().numpy() for i in range(cv_dim)},
@@ -63,7 +73,7 @@ def plot_ad_cv(
         vmin=min(df[f'CV{i}'].min() for i in range(min(cv_dim, 9))),
         vmax=max(df[f'CV{i}'].max() for i in range(min(cv_dim, 9)))
     )
-    print(norm.vmax, norm.vmin)
+    
     # Plot CVs
     start_state_xyz = md.load(f"../../data/alanine/c5.pdb").xyz
     goal_state_xyz = md.load(f"../../data/alanine/c7ax.pdb").xyz

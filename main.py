@@ -27,7 +27,7 @@ from omegaconf import DictConfig, OmegaConf, open_dict
 def main(cfg):
     # Load configs)
     lightning_logger = load_lightning_logger(cfg)
-    logger = logging.getLogger("CMD")
+    logger = logging.getLogger("SMD-baselines")
     logger.info(">> Configs")
     logger.info(OmegaConf.to_yaml(cfg))
     
@@ -46,6 +46,7 @@ def main(cfg):
         max_epochs=None,
         enable_checkpointing=False
     )
+    # torch.autograd.set_detect_anomaly(True)
     trainer.fit(model, datamodule)
     logger.info("Training complete")
     
@@ -56,7 +57,7 @@ def main(cfg):
     if os.path.exists(checkpoint_path + "-jit.pt") or os.path.exists(checkpoint_path + ".pt"):
         random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
         checkpoint_path += f"-{random_suffix}"
-    torch.save(model, checkpoint_path + ".pt")
+    torch.save(model.state_dict(), checkpoint_path + ".pt")
     example_input = torch.randn(1, cfg.input_dim)
     traced_script_module = torch.jit.trace(model, example_input)
     traced_script_module.save(checkpoint_path + "-jit.pt")

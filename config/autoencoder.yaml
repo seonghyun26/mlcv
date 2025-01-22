@@ -1,4 +1,5 @@
 name: autoencoder
+input_dim: 24
 model: {
   encoder_layers: [24, 40, 2],
   options: {
@@ -16,7 +17,7 @@ data:
   dir: /home/shpark/prj-cmd/data
   molecule: alanine
   temperature: 300.0
-  version: 10n-v1
+  version: da-1n-v1
   input: coordinate
   atom: 22
 trainer:

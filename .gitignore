@@ -1,0 +1,7 @@
+lightning_logs/
+outputs/
+wandb/
+__pycache__/
+
+*.pt
+*.npy

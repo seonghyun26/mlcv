@@ -1,0 +1,32 @@
+name: deeptica
+input_dim: 45
+model: {
+  n_cvs: 1,
+  layers: [45, 30, 30, 3],
+  options: {
+    norm_in: {
+    },
+    nn: {
+      activation: "tanh"
+    },
+  },
+}
+data:
+  dir: /home/shpark/prj-cmd/data
+  molecule: alanine
+  temperature: 300.0
+  version: timelag-1n-v1
+  input: distance
+  atom: 22
+trainer:
+  early_stopping: {
+    monitor: "valid_loss",
+    min_delta: 0.1,
+    patience: 10
+  }
+  logger:
+    name: wandb
+    project: clcv-baseline
+    log_model: False
+    tags:
+    - baseline

@@ -1,0 +1,37 @@
+name: clcv
+model: {
+  encoder_layers: [45, 32, 32, 32, 2],
+  options: {
+    encoder: {
+      activation: "tanh"
+    },
+    norm_in: {
+    }
+  }
+}
+data:
+  dir: /home/shpark/prj-cmd/data
+  molecule: alanine
+  temperature: 300.0
+  version: 10n-v1
+  input: coordinate
+  atom: 22
+trainer:
+  early_stopping: {
+    monitor: "valid_loss",
+    min_delta: 0.1,
+    patience: 50
+  }
+  logger:
+    name: wandb
+    project: clcv-baseline
+    log_model: False
+    tags:
+    - baseline
+  params: {
+    callbacks: ["metrics", "early_stopping"],
+    max_epochs: 2000,
+    logger: None,
+    enable_checkpointing: False
+  }
+checkpoint_name: clcv-10n

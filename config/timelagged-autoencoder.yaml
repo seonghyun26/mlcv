@@ -39,4 +39,3 @@ trainer:
     logger: None,
     enable_checkpointing: False
   }
-checkpoint_name: timelag-autoencoder-10n-dropout

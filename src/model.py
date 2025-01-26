@@ -70,28 +70,8 @@ class VariationalDynamicsEncoder(VariationalAutoEncoderCV):
         # =======   LOSS  =======
         # ELBO loss function when latent space and reconstruction distributions are Gaussians.
         self.loss_fn = VDELoss()
-    
-    # def encode_decode(
-    #     self, x: torch.Tensor
-    # ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    #     if self.norm_in is not None:
-    #         x = self.norm_in(x)
-
-    #     # Encode input into a Gaussian distribution.
-    #     z = self.encoder(x)
-    #     mean, log_variance = self.mean_nn(z), self.log_var_nn(z)
-
-    #     # Sample from the Gaussian distribution in latent space.
-    #     std = torch.exp(log_variance / 2)
-    #     z_sampled = torch.distributions.Normal(mean, std).rsample()
-
-    #     # Decode sample.
-    #     x_hat = self.decoder(z_sampled)
-    #     if self.norm_in is not None:
-    #         x_hat = self.norm_in.inverse(x_hat)
-
-    #     return mean, log_variance, x_hat
-
+        
+        self.optimizer = Adam(self.parameters(), lr=1e-4)
     
     def training_step(self, train_batch, batch_idx):
         x = train_batch["data"]

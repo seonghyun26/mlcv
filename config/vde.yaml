@@ -1,16 +1,17 @@
 name: vde
 input_dim: 45
 model: {
-  n_cvs: 4,
-  encoder_layers: [45, 32, 32, 32],
+  n_cvs: 2,
+  encoder_layers: [45, 256, 256, 256],
   options: {
     encoder: {
-      activation: "tanh",
+      activation: "swish",
+      dropout: [0.3, 0.3, 0.3],
       last_layer_activation: {
       }
     },
     decoder: {
-      activation: "tanh"
+      activation: "swish"
     },
     norm_in: {
     },
@@ -26,7 +27,7 @@ data:
 trainer:
   early_stopping: {
     monitor: "valid_loss",
-    min_delta: 0.1,
+    min_delta: 0.01,
     patience: 50
   }
   logger:
@@ -41,4 +42,3 @@ trainer:
     logger: None,
     enable_checkpointing: False
   }
-checkpoint_name: vde-10n

@@ -15,8 +15,7 @@ from mlcolvar.utils.trainer import MetricsCallback
 from mlcolvar.utils.io import create_dataset_from_files
 
 from src import *
-from tqdm.auto import tqdm, trange
-from omegaconf import DictConfig, OmegaConf, open_dict
+from omegaconf import OmegaConf
 
 
 @hydra.main(

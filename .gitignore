@@ -4,5 +4,6 @@ wandb/
 __pycache__/
 mlcolvar/
 
+*.png
 *.pt
 *.npy

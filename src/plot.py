@@ -55,17 +55,27 @@ def plot_ad_cv(
     cv_list = torch.stack(cv_list)
     
     # Scaling for some cases
+    print(f"CV range: {cv_list.min()} ~ {cv_list.max()}")
     if cfg.name == "deeptda":
         cv_list = cv_list / cfg.output_scale
-    elif cfg.name in ["deeptica", "autoencoder", "timelagged-autoencoder", "vde"]:
-        print(f"CV range: {cv_list.min()} ~ {cv_list.max()}")
+    elif cfg.name in ["autoencoder", "timelagged-autoencoder", "vde"]:
         cv_list = map_range(cv_list, cv_list.min(), cv_list.max())
-    
+    elif cfg.name in ["clcv", "deeptica"]:
+        model.set_cv_range(cv_list.min(), cv_list.max())
+        cv_list = model(projection_dataset)
+    print(f"CV normalized range: {cv_list.min()} ~ {cv_list.max()}")
+        
     df = pd.DataFrame({
         **{f'CV{i}': cv_list[:, i].detach().cpu().numpy() for i in range(cv_dim)},
         'psi': psi_list.squeeze(),
         'phi': phi_list.squeeze()
     })
+    for i in range(cv_dim):
+        wandb.log({
+            f"cv/cv{i}/min": df[f'CV{i}'].min(),
+            f"cv/cv{i}/max": df[f'CV{i}'].max(),
+            f"cv/cv{i}/std": df[f'CV{i}'].std()
+        })
     
     # Plot the projection of CVs
     fig, axs = plt.subplots(2, 2, figsize = ( 15, 12 ) )
@@ -84,7 +94,7 @@ def plot_ad_cv(
     psi_start = compute_dihedral_torch(start_state[:, ALDP_PSI_ANGLE])
     phi_goal = compute_dihedral_torch(goal_state[:, ALDP_PHI_ANGLE])
     psi_goal = compute_dihedral_torch(goal_state[:, ALDP_PSI_ANGLE])
-    for i in range(min(cv_dim, 9)):
+    for i in range(min(cv_dim, 4)):
         ax = axs[i]
         df.plot.hexbin(
             'phi','psi', C=f"CV{i}",

@@ -1,17 +1,15 @@
 import torch
 import wandb
-import numpy as np
 
-from tqdm import tqdm
 from torch import optim
-from omegaconf import DictConfig, OmegaConf, open_dict
+from omegaconf import OmegaConf
 
-from mlcolvar.cvs import DeepLDA, DeepTDA, DeepTICA
+from mlcolvar.cvs import DeepLDA, DeepTDA
 from mlcolvar.data import DictDataset, DictModule
 
 from .util import *
 from .dataset import *
-from .model import CLCV, AutoEncoderCV, VariationalDynamicsEncoder
+from .model import DeepTICA, CLCV, AutoEncoderCV, VariationalDynamicsEncoder
 
 
 model_dict = {
@@ -44,23 +42,22 @@ def load_model(cfg):
     elif cfg.name == "gnncv-tica":
         import mlcolvar.graph as mg
         mg.utils.torch_tools.set_default_dtype('float32')
+        scheduler_name = cfg.trainer.optimizer.lr_scheduler.scheduler
+        if scheduler_name == "ExponentialLR":
+            scheduler = optim.lr_scheduler.ExponentialLR
+        optimizer_options = {
+            'optimizer': cfg.trainer.optimizer.optimizer,
+            'lr_scheduler': {
+                'scheduler': scheduler,
+                'gamma': cfg.trainer.optimizer.lr_scheduler.gamma
+            }
+        }
         model = mg.cvs.GraphDeepTICA(
             n_cvs=cfg.n_cvs,
             cutoff=cfg.cutoff,
             atomic_numbers=cfg.atomic_numbers,
             model_options=dict(cfg.model),
-            optimizer_options=dict(cfg.trainer.optimizer),
-        )
-        
-    elif cfg.name == "gnncv-tda":
-        import mlcolvar.graph as mg
-        mg.utils.torch_tools.set_default_dtype('float32')
-        model = mg.cvs.GraphDeepTDA(
-            n_cvs=cfg.n_cvs,
-            cutoff=cfg.cutoff,
-            atomic_numbers=cfg.atomic_numbers,
-            model_options=dict(cfg.model),
-            optimizer_options=dict(cfg.trainer.optimizer),
+            optimizer_options=optimizer_options,
         )
     
     else:
@@ -141,7 +138,7 @@ def load_data(cfg):
         })
         datamodule = DictModule(custom_dataset,lengths=[0.8,0.2])
     
-    elif cfg.name in ["gnncv-tica", "gnncv-tda"]:
+    elif cfg.name in ["gnncv-tica"]:
         import mlcolvar.graph as mg
         mg.utils.torch_tools.set_default_dtype('float32')
         dataset = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/graph-dataset.pt")

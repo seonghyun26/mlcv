@@ -29,12 +29,13 @@ trainer:
     patience: 20,
     min_delta: 0.001,
   }
+  max_epochs: 1000
   optimizer: {
-        'optimizer': {'lr': 3E-3, 'weight_decay': 2E-4},
-        'lr_scheduler': {
-            'scheduler': torch.optim.lr_scheduler.ExponentialLR,
-            'gamma': 0.9995
-        }
+      'optimizer': {'lr': 3E-3, 'weight_decay': 2E-4},
+      'lr_scheduler': {
+        'scheduler': "ExponentialLR",
+        'gamma': 0.9995
+      }
     }
   logger:
     name: wandb

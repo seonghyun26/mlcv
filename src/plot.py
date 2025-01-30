@@ -15,7 +15,7 @@ from .util import compute_dihedral_torch
 
 ALDP_PHI_ANGLE = [4, 6, 8, 14]
 ALDP_PSI_ANGLE = [6, 8, 14, 16]
-
+MODEL_NAME = ["clcv", "deeplda", "deeptda", "deeptica", "autoencoder", "timelagged-autoencoder", "vde"]
 
 def map_range(x, in_min, in_max):
     out_max = 1
@@ -55,15 +55,13 @@ def plot_ad_cv(
     cv_list = torch.stack(cv_list)
     
     # Scaling for some cases
-    print(f"CV range: {cv_list.min()} ~ {cv_list.max()}")
-    if cfg.name == "deeptda":
-        cv_list = cv_list / cfg.output_scale
-    elif cfg.name in ["autoencoder", "timelagged-autoencoder", "vde"]:
-        cv_list = map_range(cv_list, cv_list.min(), cv_list.max())
-    elif cfg.name in ["clcv", "deeptica"]:
-        model.set_cv_range(cv_list.min(), cv_list.max())
+    print(f"CV range: {cv_list.min(dim=0)[0]} ~ {cv_list.max(dim=0)[0]}")
+    if cfg.name in MODEL_NAME:
+        model.set_cv_range(cv_list.min(dim=0)[0], cv_list.max(dim=0)[0], cv_list.std(dim=0)[0])
         cv_list = model(projection_dataset)
-    print(f"CV normalized range: {cv_list.min()} ~ {cv_list.max()}")
+    else:
+        raise ValueError(f"Model {cfg.name} not found")
+    print(f"CV normalized range: {cv_list.min(dim=0)[0]} ~ {cv_list.max(dim=0)[0]}")
         
     df = pd.DataFrame({
         **{f'CV{i}': cv_list[:, i].detach().cpu().numpy() for i in range(cv_dim)},

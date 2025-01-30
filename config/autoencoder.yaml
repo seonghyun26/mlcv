@@ -26,16 +26,10 @@ trainer:
     min_delta: 0.1,
     patience: 50
   }
+  max_epochs: 2000
   logger:
     name: wandb
     project: clcv-baseline
     log_model: False
     tags:
     - baseline
-  params: {
-    callbacks: ["metrics", "early_stopping"],
-    max_epochs: 2000,
-    logger: None,
-    enable_checkpointing: False
-  }
-checkpoint_name: autoencoder-10n

@@ -4,12 +4,12 @@ import wandb
 from torch import optim
 from omegaconf import OmegaConf
 
-from mlcolvar.cvs import DeepLDA, DeepTDA
+# from mlcolvar.cvs import DeepTDA
 from mlcolvar.data import DictDataset, DictModule
 
 from .util import *
 from .dataset import *
-from .model import DeepTICA, CLCV, AutoEncoderCV, VariationalDynamicsEncoder
+from .model import *
 
 
 model_dict = {
@@ -36,9 +36,6 @@ def load_model(cfg):
             options = {'nn': {'activation': 'tanh'} }
         )
     
-    elif cfg.name in model_dict:
-        model = model_dict[cfg.name](**cfg.model)
-    
     elif cfg.name == "gnncv-tica":
         import mlcolvar.graph as mg
         mg.utils.torch_tools.set_default_dtype('float32')
@@ -59,6 +56,9 @@ def load_model(cfg):
             model_options=dict(cfg.model),
             optimizer_options=optimizer_options,
         )
+    
+    elif cfg.name in model_dict:
+        model = model_dict[cfg.name](**cfg.model)
     
     else:
         raise ValueError(f"Model {cfg.name} not found")

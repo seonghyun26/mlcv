@@ -27,6 +27,7 @@ trainer:
     min_delta: 0.1,
     patience: 50
   }
+  max_epochs: 2000
   logger:
     name: wandb
     project: clcv-baseline

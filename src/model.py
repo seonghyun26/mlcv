@@ -6,13 +6,12 @@ from torch.optim import Adam
 
 from typing import Optional
 
-from mlcolvar.cvs import BaseCV, DeepTICA, AutoEncoderCV, VariationalAutoEncoderCV
+from mlcolvar.cvs import BaseCV, DeepLDA, DeepTDA, DeepTICA, AutoEncoderCV, VariationalAutoEncoderCV
 from mlcolvar.core import FeedForward, Normalization
 from mlcolvar.core.loss.elbo import elbo_gaussians_loss
 
 
-
-class DeepTICA(DeepTICA):
+class DeepLDA(DeepLDA):
     def __init__(
         self,
         *args,
@@ -20,9 +19,18 @@ class DeepTICA(DeepTICA):
     ):
         super().__init__(*args, **kwargs)
         self.cv_normalize = False
-        self.cv_min = 0
-        self.cv_max = 1
     
+    def set_cv_range(self, cv_min, cv_max, cv_std):
+        self.cv_normalize = True
+        self.cv_min = cv_min
+        self.cv_max = cv_max
+        self.cv_std = cv_std
+
+    def _map_range(self, x):
+        out_max = 1
+        out_min = -1
+        return (x - self.cv_min) * (out_max - out_min) / (self.cv_max - self.cv_min) + out_min
+
     def forward_cv(self, x: torch.Tensor) -> torch.Tensor:
         for b in self.BLOCKS:
             block = getattr(self, b)
@@ -34,21 +42,68 @@ class DeepTICA(DeepTICA):
             
         return x
 
-    def set_cv_range(self, cv_min, cv_max):
+
+class DeepTDA(DeepTDA):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cv_normalize = False
+        
+    def set_cv_range(self, cv_min, cv_max, cv_std):
         self.cv_normalize = True
         self.cv_min = cv_min
         self.cv_max = cv_max
+        self.cv_std = cv_std
 
     def _map_range(self, x):
         out_max = 1
         out_min = -1
         return (x - self.cv_min) * (out_max - out_min) / (self.cv_max - self.cv_min) + out_min
 
+    def forward_cv(self, x: torch.Tensor) -> torch.Tensor:
+        for b in self.BLOCKS:
+            block = getattr(self, b)
+            if block is not None:
+                x = block(x)
+
+        if self.cv_normalize:
+            x = self._map_range(x)
+            
+        return x
+
+
+class DeepTICA(DeepTICA):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cv_normalize = False
+
+    def set_cv_range(self, cv_min, cv_max, cv_std):
+        self.cv_normalize = True
+        self.cv_min = cv_min
+        self.cv_max = cv_max
+        self.cv_std = cv_std
+
+    def _map_range(self, x):
+        out_max = 1
+        out_min = -1
+        return (x - self.cv_min) * (out_max - out_min) / (self.cv_max - self.cv_min) + out_min
+        
+    def forward_cv(self, x: torch.Tensor) -> torch.Tensor:
+        for b in self.BLOCKS:
+            block = getattr(self, b)
+            if block is not None:
+                x = block(x)
+
+        if self.cv_normalize:
+            x = self._map_range(x)
+            
+        return x
+
 
 class AutoEncoderCV(AutoEncoderCV):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.optimizer = Adam(self.parameters(), lr=1e-3)
+        self.cv_normalize = False
 
     def optimizer_step(
         self,
@@ -62,6 +117,27 @@ class AutoEncoderCV(AutoEncoderCV):
 
     def backward(self, loss):
         loss.backward(retain_graph=True)
+    
+    def forward_cv(self, x: torch.Tensor) -> torch.Tensor:
+        if self.norm_in is not None:
+            x = self.norm_in(x)
+        x = self.encoder(x)
+        
+        if self.cv_normalize:
+            x = self._map_range(x)
+        return x
+    
+    def set_cv_range(self, cv_min, cv_max, cv_std):
+        self.cv_normalize = True
+        self.cv_min = cv_min
+        self.cv_max = cv_max
+        self.cv_std = cv_std
+
+    def _map_range(self, x):
+        out_max = 1
+        out_min = -1
+        return (x - self.cv_min) * (out_max - out_min) / (self.cv_max - self.cv_min) + out_min
+
         
 class VDELoss(torch.nn.Module):
     def forward(
@@ -100,6 +176,7 @@ class VariationalDynamicsEncoder(VariationalAutoEncoderCV):
         # ELBO loss function when latent space and reconstruction distributions are Gaussians.
         self.loss_fn = VDELoss()
         self.optimizer = Adam(self.parameters(), lr=1e-4)
+        self.cv_normalize = False
     
     def training_step(
         self,
@@ -140,6 +217,26 @@ class VariationalDynamicsEncoder(VariationalAutoEncoderCV):
         self.log(f"{name}_loss", loss, on_epoch=True)
 
         return loss
+
+    def forward_cv(self, x: torch.Tensor) -> torch.Tensor:
+        if self.norm_in is not None:
+            x = self.norm_in(x)
+        x = self.encoder(x)
+        
+        if self.cv_normalize:
+            x = self._map_range(x)
+        return x
+    
+    def set_cv_range(self, cv_min, cv_max, cv_std):
+        self.cv_normalize = True
+        self.cv_min = cv_min
+        self.cv_max = cv_max
+        self.cv_std = cv_std
+
+    def _map_range(self, x):
+        out_max = 1
+        out_min = -1
+        return (x - self.cv_min) * (out_max - out_min) / (self.cv_max - self.cv_min) + out_min
 
 
 class CLCV(BaseCV, lightning.LightningModule):
@@ -184,9 +281,10 @@ class CLCV(BaseCV, lightning.LightningModule):
             x = self.map_range(x)
         return x
 
-    def set_cv_range(self, cv_min, cv_max):
+    def set_cv_range(self, cv_min, cv_max, cv_std):
         self.cv_min = cv_min
         self.cv_max = cv_max
+        self.cv_std = cv_std
 
     def map_range(self, x):
         out_max = 1

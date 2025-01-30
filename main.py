@@ -30,7 +30,7 @@ def main(cfg):
     datamodule = load_data(cfg)
     
     # train
-    logger.info(">> Training")
+    logger.info(">> Training...")
     metrics = MetricsCallback()
     early_stopping = EarlyStopping(**cfg.trainer.early_stopping)
     trainer = lightning.Trainer(
@@ -40,9 +40,12 @@ def main(cfg):
         enable_checkpointing=False
     )
     trainer.fit(model, datamodule)
-    logger.info("Training complete")
+    logger.info(">> Training complete")
     
     # Save model
+    model.eval()
+    logger.info("")
+    logger.info(">> Saving models")
     checkpoint_path = f"./model/{cfg.name}/{cfg.data.version}"
     if not os.path.exists(f"./model/{cfg.name}"):
         os.makedirs(f"./model/{cfg.name}")
@@ -56,6 +59,7 @@ def main(cfg):
     logger.info(f"Model saved at {checkpoint_path}")
     
     # Plot CVs
+    logger.info(">> Plotting CVs...")
     plot_ad_cv(
         cfg = cfg,
         model = model,

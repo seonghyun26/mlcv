@@ -17,10 +17,6 @@ ALDP_PHI_ANGLE = [4, 6, 8, 14]
 ALDP_PSI_ANGLE = [6, 8, 14, 16]
 MODEL_NAME = ["clcv", "deeplda", "deeptda", "deeptica", "autoencoder", "timelagged-autoencoder", "vde"]
 
-def map_range(x, in_min, in_max):
-    out_max = 1
-    out_min = -1
-    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
 def plot_ad_cv(
     cfg,
@@ -53,8 +49,14 @@ def plot_ad_cv(
         cv = model(data)
         cv_list.append(cv)
     cv_list = torch.stack(cv_list)
+    for i in range(cv_dim):
+        wandb.log({
+            f"cv/cv{i}/min": cv_list[:, i].min(),
+            f"cv/cv{i}/max": cv_list[:, i].max(),
+            f"cv/cv{i}/std": cv_list[:, i].std()
+        })
     
-    # Scaling for some cases
+    # CV Normalization
     print(f"CV range: {cv_list.min(dim=0)[0]} ~ {cv_list.max(dim=0)[0]}")
     if cfg.name in MODEL_NAME:
         model.set_cv_range(cv_list.min(dim=0)[0], cv_list.max(dim=0)[0], cv_list.std(dim=0)[0])
@@ -62,18 +64,12 @@ def plot_ad_cv(
     else:
         raise ValueError(f"Model {cfg.name} not found")
     print(f"CV normalized range: {cv_list.min(dim=0)[0]} ~ {cv_list.max(dim=0)[0]}")
-        
     df = pd.DataFrame({
         **{f'CV{i}': cv_list[:, i].detach().cpu().numpy() for i in range(cv_dim)},
         'psi': psi_list.squeeze(),
         'phi': phi_list.squeeze()
     })
-    for i in range(cv_dim):
-        wandb.log({
-            f"cv/cv{i}/min": df[f'CV{i}'].min(),
-            f"cv/cv{i}/max": df[f'CV{i}'].max(),
-            f"cv/cv{i}/std": df[f'CV{i}'].std()
-        })
+
     
     # Plot the projection of CVs
     fig, axs = plt.subplots(2, 2, figsize = ( 15, 12 ) )

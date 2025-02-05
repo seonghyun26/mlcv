@@ -30,9 +30,3 @@ trainer:
     log_model: False
     tags:
     - method
-  params: {
-    callbacks: ["metrics", "early_stopping"],
-    max_epochs: 2000,
-    logger: None,
-    enable_checkpointing: False
-  }

@@ -1,4 +1,5 @@
 name: timelagged-autoencoder
+input: coordinate
 input_dim: 30
 model: {
   encoder_layers: [30, 100, 100, 1],

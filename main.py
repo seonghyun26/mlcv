@@ -42,30 +42,30 @@ def main(cfg):
     trainer.fit(model, datamodule)
     logger.info(">> Training complete")
     
-    # Save model
+    # Plot CVs
     model.eval()
     logger.info("")
-    logger.info(">> Saving models")
+    logger.info(">> Saving plots")
     checkpoint_path = f"./model/{cfg.name}/{cfg.data.version}"
     if not os.path.exists(f"./model/{cfg.name}"):
         os.makedirs(f"./model/{cfg.name}")
     if os.path.exists(checkpoint_path + "-jit.pt") or os.path.exists(checkpoint_path + ".pt"):
         random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
         checkpoint_path += f"-{random_suffix}"
-    torch.save(model.state_dict(), checkpoint_path + ".pt")
-    example_input = torch.randn(1, cfg.input_dim)
-    traced_script_module = torch.jit.trace(model, example_input)
-    traced_script_module.save(checkpoint_path + "-jit.pt")
-    logger.info(f"Model saved at {checkpoint_path}")
-    
-    # Plot CVs
-    logger.info(">> Plotting CVs...")
     plot_ad_cv(
         cfg = cfg,
         model = model,
         datamodule = datamodule,
         checkpoint_path = checkpoint_path,
     )
+    
+    # Save model
+    logger.info(">> Saving model")
+    torch.save(model.state_dict(), checkpoint_path + ".pt")
+    example_input = torch.rand(1, cfg.input_dim)
+    traced_script_module = torch.jit.trace(model, example_input)
+    traced_script_module.save(checkpoint_path + "-jit.pt")
+    logger.info(f"Model saved at {checkpoint_path}")
     
     # finish
     wandb.finish()

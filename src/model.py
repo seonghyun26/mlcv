@@ -22,9 +22,9 @@ class DeepLDA(DeepLDA):
     
     def set_cv_range(self, cv_min, cv_max, cv_std):
         self.cv_normalize = True
-        self.cv_min = cv_min
-        self.cv_max = cv_max
-        self.cv_std = cv_std
+        self.cv_min = cv_min.detach()
+        self.cv_max = cv_max.detach()
+        self.cv_std = cv_std.detach()
 
     def _map_range(self, x):
         out_max = 1
@@ -50,9 +50,9 @@ class DeepTDA(DeepTDA):
         
     def set_cv_range(self, cv_min, cv_max, cv_std):
         self.cv_normalize = True
-        self.cv_min = cv_min
-        self.cv_max = cv_max
-        self.cv_std = cv_std
+        self.cv_min = cv_min.detach()
+        self.cv_max = cv_max.detach()
+        self.cv_std = cv_std.detach()
 
     def _map_range(self, x):
         out_max = 1
@@ -78,9 +78,9 @@ class DeepTICA(DeepTICA):
 
     def set_cv_range(self, cv_min, cv_max, cv_std):
         self.cv_normalize = True
-        self.cv_min = cv_min
-        self.cv_max = cv_max
-        self.cv_std = cv_std
+        self.cv_min = cv_min.detach()
+        self.cv_max = cv_max.detach()
+        self.cv_std = cv_std.detach()
 
     def _map_range(self, x):
         out_max = 1
@@ -129,9 +129,9 @@ class AutoEncoderCV(AutoEncoderCV):
     
     def set_cv_range(self, cv_min, cv_max, cv_std):
         self.cv_normalize = True
-        self.cv_min = cv_min
-        self.cv_max = cv_max
-        self.cv_std = cv_std
+        self.cv_min = cv_min.detach()
+        self.cv_max = cv_max.detach()
+        self.cv_std = cv_std.detach()
 
     def _map_range(self, x):
         out_max = 1
@@ -229,9 +229,9 @@ class VariationalDynamicsEncoder(VariationalAutoEncoderCV):
     
     def set_cv_range(self, cv_min, cv_max, cv_std):
         self.cv_normalize = True
-        self.cv_min = cv_min
-        self.cv_max = cv_max
-        self.cv_std = cv_std
+        self.cv_min = cv_min.detach()
+        self.cv_max = cv_max.detach()
+        self.cv_std = cv_std.detach()
 
     def _map_range(self, x):
         out_max = 1
@@ -251,8 +251,8 @@ class CLCV(BaseCV, lightning.LightningModule):
     ):
         super().__init__(in_features=encoder_layers[0], out_features=encoder_layers[-1], **kwargs)
         # ======= OPTIONS =======
-        # parse and sanitize
         options = self.parse_options(options)
+        self.cv_normalize = False
         self.cv_min = 0
         self.cv_max = 1
 
@@ -277,16 +277,18 @@ class CLCV(BaseCV, lightning.LightningModule):
         if self.norm_in is not None:
             x = self.norm_in(x)
         x = self.encoder(x)
-        if not self.training:
-            x = self.map_range(x)
+        
+        if self.cv_normalize:
+            x = self._map_range(x)
         return x
 
     def set_cv_range(self, cv_min, cv_max, cv_std):
+        self.cv_normalize = True
         self.cv_min = cv_min
         self.cv_max = cv_max
         self.cv_std = cv_std
 
-    def map_range(self, x):
+    def _map_range(self, x):
         out_max = 1
         out_min = -1
         return (x - self.cv_min) * (out_max - out_min) / (self.cv_max - self.cv_min) + out_min

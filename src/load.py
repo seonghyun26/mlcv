@@ -23,39 +23,39 @@ model_dict = {
 
 
 def load_model(cfg):
-    if cfg.name == "deeptica":
+    if cfg.model.name == "deeptica":
         model = DeepTICA(
-            layers = cfg.model.layers,
-            n_cvs = cfg.model.n_cvs,
-            options = dict(cfg.model.options)
+            layers = cfg.model.model.layers,
+            n_cvs = cfg.model.model.n_cvs,
+            options = dict(cfg.model.model.options)
         )
     
-    elif cfg.name == "gnncv-tica":
+    elif cfg.model.name == "gnncv-tica":
         import mlcolvar.graph as mg
         mg.utils.torch_tools.set_default_dtype('float32')
-        scheduler_name = cfg.trainer.optimizer.lr_scheduler.scheduler
+        scheduler_name = cfg.model.trainer.optimizer.lr_scheduler.scheduler
         if scheduler_name == "ExponentialLR":
             scheduler = optim.lr_scheduler.ExponentialLR
         optimizer_options = {
-            'optimizer': cfg.trainer.optimizer.optimizer,
+            'optimizer': cfg.model.trainer.optimizer.optimizer,
             'lr_scheduler': {
                 'scheduler': scheduler,
-                'gamma': cfg.trainer.optimizer.lr_scheduler.gamma
+                'gamma': cfg.model.trainer.optimizer.lr_scheduler.gamma
             }
         }
         model = mg.cvs.GraphDeepTICA(
             n_cvs=cfg.n_cvs,
             cutoff=cfg.cutoff,
             atomic_numbers=cfg.atomic_numbers,
-            model_options=dict(cfg.model),
+            model_options=dict(cfg.model.model),
             optimizer_options=optimizer_options,
         )
     
-    elif cfg.name in model_dict:
-        model = model_dict[cfg.name](**cfg.model)
+    elif cfg.model.name in model_dict:
+        model = model_dict[cfg.model.name](**cfg.model.model)
     
     else:
-        raise ValueError(f"Model {cfg.name} not found")
+        raise ValueError(f"Model {cfg.model.name} not found")
     
     print(">> Model")
     print(model)
@@ -63,19 +63,19 @@ def load_model(cfg):
 
 
 def load_lightning_logger(cfg):
-    if cfg.trainer.logger.name == "wandb":
+    if cfg.model.logger.name == "wandb":
         from lightning.pytorch.loggers import WandbLogger
         wandb.init(
-            project = cfg.trainer.logger.project,
+            project = cfg.model.logger.project,
             entity = "eddy26",
-            tags = cfg.trainer.logger.tags,
+            tags = cfg.model.logger.tags,
             config = OmegaConf.to_container(
                 cfg, resolve=True, throw_on_missing=True
             )
         )
         lightning_logger = WandbLogger(
-            project = cfg.trainer.logger.project,
-            log_model = cfg.trainer.logger.log_model
+            project = cfg.model.logger.project,
+            log_model = cfg.model.logger.log_model
         )
     else:
         lightning_logger = None
@@ -91,7 +91,7 @@ def load_data(cfg):
         cfg.data.version
     )
     
-    if cfg.name == "clcv":
+    if cfg.model.name == "clcv":
         custom_dataset = torch.load(os.path.join(data_dir, "cl-distance.pt"))
         dataset = DictDataset({
             "data": custom_dataset.x,
@@ -100,7 +100,7 @@ def load_data(cfg):
         })
         datamodule = DictModule(dataset,lengths=[0.8,0.2])
 
-    elif cfg.name in ["deeplda", "deeptda"]:
+    elif cfg.model.name in ["deeplda", "deeptda"]:
         custom_data = torch.load(os.path.join(data_dir, "distance.pt"))
         custom_label = torch.load(os.path.join(data_dir, "label.pt"))
         dataset = DictDataset({
@@ -109,7 +109,7 @@ def load_data(cfg):
         })
         datamodule = DictModule(dataset,lengths=[0.8,0.2])
         
-    elif cfg.name == "deeptica":
+    elif cfg.model.name == "deeptica":
         custom_data = torch.load(os.path.join(data_dir, "distance.pt"))
         custom_data_lag = torch.load(os.path.join(data_dir, "distance-timelag.pt"))
         dataset = DictDataset({
@@ -120,7 +120,7 @@ def load_data(cfg):
         })
         datamodule = DictModule(dataset,lengths=[0.8,0.2])
     
-    elif cfg.name == "autoencoder":
+    elif cfg.model.name == "autoencoder":
         custom_data = torch.load(os.path.join(data_dir, "xyz-aligned.pt"))
         backbone_atom_data = custom_data[:, ALANINE_BACKBONE_ATOM_IDX]
         custom_dataset = DictDataset({
@@ -128,7 +128,7 @@ def load_data(cfg):
         })
         datamodule = DictModule(custom_dataset,lengths=[0.8,0.2])
     
-    elif cfg.name == "timelagged-autoencoder":
+    elif cfg.model.name == "timelagged-autoencoder":
         custom_data = torch.load(os.path.join(data_dir, "xyz-aligned.pt"))
         custom_data_lag = torch.load(os.path.join(data_dir, "xyz-aligned-timelag.pt"))
         backbone_atom_data = custom_data[:, ALANINE_HEAVY_ATOM_IDX]
@@ -140,7 +140,7 @@ def load_data(cfg):
         })
         datamodule = DictModule(custom_dataset,lengths=[0.8,0.2])
     
-    elif cfg.name == "gnncv-tica":
+    elif cfg.model.name == "gnncv-tica":
         import mlcolvar.graph as mg
         mg.utils.torch_tools.set_default_dtype('float32')
         graph_dataset = torch.load(os.path.join(data_dir, "graph-dataset.pt"))
@@ -151,7 +151,7 @@ def load_data(cfg):
             datasets, random_split=False, batch_size=5000
         )
     
-    elif cfg.name == "vde":
+    elif cfg.model.name == "vde":
         custom_data = torch.load(os.path.join(data_dir, "distance-aligned.pt"))
         custom_data_lag = torch.load(os.path.join(data_dir, "distance-timelag.pt"))
         dataset = DictDataset({
@@ -161,7 +161,7 @@ def load_data(cfg):
         datamodule = DictModule(dataset,lengths=[0.8,0.2])
     
     else:
-        raise ValueError(f"Data not found for model {cfg.name}")
+        raise ValueError(f"Data not found for model {cfg.model.name}")
     
     print(">> Dataset")
     print(datamodule)

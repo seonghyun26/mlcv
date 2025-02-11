@@ -12,6 +12,7 @@
             "console": "integratedTerminal",
             "args": [
                 "--config-name", "debug",
+                "hydra.run.dir=outputs/_debug",
             ]
         }
     ]

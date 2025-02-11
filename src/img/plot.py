@@ -19,14 +19,14 @@ def plot_ad_cv(
     datamodule,
     checkpoint_path,
 ):
-    if cfg.name in ["deeplda", "deeptda"]:
+    if cfg.model.name in ["deeplda", "deeptda"]:
         cv_dim = 1
-    elif cfg.name in ["deeptica", "vde"]:
+    elif cfg.model.name in ["deeptica", "vde"]:
         cv_dim = cfg.model["n_cvs"]
-    elif cfg.name in ["autoencoder", "timelagged-autoencoder", "vde", "clcv"]:
+    elif cfg.model.name in ["autoencoder", "timelagged-autoencoder", "vde", "clcv"]:
         cv_dim = cfg.model["encoder_layers"][-1]
     else:
-        raise ValueError(f"Model {cfg.name} not found")
+        raise ValueError(f"Model {cfg.model.name} not found")
     
     # Load data
     projection_dataset = datamodule.dataset["data"]
@@ -69,14 +69,18 @@ def plot_ad_cv(
     )
     
     # Plot CVs
-    start_state_xyz = md.load(f"../simulation/data/alanine/c5.pdb").xyz
-    goal_state_xyz = md.load(f"../simulation/data/alanine/c7ax.pdb").xyz
-    start_state = torch.tensor(start_state_xyz)
-    goal_state = torch.tensor(goal_state_xyz)
-    phi_start = compute_dihedral_torch(start_state[:, ALDP_PHI_ANGLE])
-    psi_start = compute_dihedral_torch(start_state[:, ALDP_PSI_ANGLE])
-    phi_goal = compute_dihedral_torch(goal_state[:, ALDP_PHI_ANGLE])
-    psi_goal = compute_dihedral_torch(goal_state[:, ALDP_PSI_ANGLE])
+    # start_state_xyz = md.load(f"../simulation/data/alanine/c5.pdb").xyz
+    # goal_state_xyz = md.load(f"../simulation/data/alanine/c7ax.pdb").xyz
+    # start_state = torch.tensor(start_state_xyz)
+    # goal_state = torch.tensor(goal_state_xyz)
+    # phi_start = compute_dihedral_torch(start_state[:, ALDP_PHI_ANGLE])
+    # psi_start = compute_dihedral_torch(start_state[:, ALDP_PSI_ANGLE])
+    # phi_goal = compute_dihedral_torch(goal_state[:, ALDP_PHI_ANGLE])
+    # psi_goal = compute_dihedral_torch(goal_state[:, ALDP_PSI_ANGLE])
+    c5 = torch.load(f"../simulation/data/alanine/c5.pt")
+    c7ax = torch.load(f"../simulation/data/alanine/c7ax.pt")
+    phi_start, psi_start = c5["phi"], c5["psi"]
+    phi_goal, psi_goal = c7ax["phi"], c7ax["psi"]
     for i in range(min(cv_dim, 4)):
         ax = axs[i]
         df.plot.hexbin(
@@ -90,7 +94,7 @@ def plot_ad_cv(
     
     save_dir = checkpoint_path + "-cv-plot.png"
     fig.savefig(save_dir)
-    plt.close()
     print(f"CV plot saved at {save_dir}")
     
     wandb.log({"cv-plot": wandb.Image(save_dir)})
+    plt.close()

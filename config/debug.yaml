@@ -1,36 +1,3 @@
-name: deeplda
-input_dim: 45
-model: {
-  layers: [45, 30, 30, 2],
-  n_states: 2,
-  options: {
-    norm_in: {
-    },
-    nn: {
-      activation: "relu"
-    },
-    lda: {
-      mode: "standard"
-    },
-  },
-}
-data:
-  dir: ../simulation/dataset
-  molecule: alanine
-  temperature: 300.0
-  version: 1n-v1
-  input: distance
-  atom: 22
-trainer:
-  early_stopping: {
-    monitor: "valid_loss",
-    min_delta: 0.1,
-    patience: 50
-  }
-  max_epochs: 2000
-  logger:
-    name: wandb
-    project: mlcv
-    log_model: False
-    tags:
-    - baseline
+defaults:
+- data: alanine-1n-random
+- model: deeplda

@@ -32,11 +32,11 @@ def main(cfg):
     # train
     logger.info(">> Training...")
     metrics = MetricsCallback()
-    early_stopping = EarlyStopping(**cfg.trainer.early_stopping)
+    early_stopping = EarlyStopping(**cfg.model.trainer.early_stopping)
     trainer = lightning.Trainer(
         callbacks=[metrics, early_stopping],
         logger=lightning_logger,
-        max_epochs=cfg.trainer.max_epochs,
+        max_epochs=cfg.model.trainer.max_epochs,
         enable_checkpointing=False
     )
     trainer.fit(model, datamodule)
@@ -46,9 +46,9 @@ def main(cfg):
     model.eval()
     logger.info("")
     logger.info(">> Saving plots")
-    checkpoint_path = f"./model/{cfg.name}/{cfg.data.version}"
-    if not os.path.exists(f"./model/{cfg.name}"):
-        os.makedirs(f"./model/{cfg.name}")
+    checkpoint_path = f"./model/{cfg.model.name}/{cfg.data.version}"
+    if not os.path.exists(f"./model/{cfg.model.name}"):
+        os.makedirs(f"./model/{cfg.model.name}")
     if os.path.exists(checkpoint_path + "-jit.pt") or os.path.exists(checkpoint_path + ".pt"):
         random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
         checkpoint_path += f"-{random_suffix}"
@@ -62,7 +62,7 @@ def main(cfg):
     # Save model
     logger.info(">> Saving model")
     torch.save(model.state_dict(), checkpoint_path + ".pt")
-    example_input = torch.rand(1, cfg.input_dim)
+    example_input = torch.rand(1, cfg.model.input_dim)
     traced_script_module = torch.jit.trace(model, example_input)
     traced_script_module.save(checkpoint_path + "-jit.pt")
     logger.info(f"Model saved at {checkpoint_path}")

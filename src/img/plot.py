@@ -1,3 +1,4 @@
+import os
 import torch
 import wandb
 
@@ -8,14 +9,8 @@ import mdtraj as md
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
-from tqdm import tqdm
-
-from .util import compute_dihedral_torch
-
-
-ALDP_PHI_ANGLE = [4, 6, 8, 14]
-ALDP_PSI_ANGLE = [6, 8, 14, 16]
-MODEL_NAME = ["clcv", "deeplda", "deeptda", "deeptica", "autoencoder", "timelagged-autoencoder", "vde"]
+from ..util import compute_dihedral_torch
+from ..util.constant import *
 
 
 def plot_ad_cv(
@@ -24,9 +19,7 @@ def plot_ad_cv(
     datamodule,
     checkpoint_path,
 ):
-    model.eval()
-    cv_list = []
-    if cfg.name == "deeplda" or cfg.name == "deeptda":
+    if cfg.name in ["deeplda", "deeptda"]:
         cv_dim = 1
     elif cfg.name in ["deeptica", "vde"]:
         cv_dim = cfg.model["n_cvs"]
@@ -37,35 +30,31 @@ def plot_ad_cv(
     
     # Load data
     projection_dataset = datamodule.dataset["data"]
-    data_dir = f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}"
+    data_dir = os.path.join(
+        cfg.data.dir,
+        cfg.data.molecule,
+        str(cfg.data.temperature),
+        cfg.data.version
+    )
     psi_list = np.load(f"{data_dir}/psi.npy")
     phi_list = np.load(f"{data_dir}/phi.npy")
     
     # Compute CV
-    for data in tqdm(
-        projection_dataset,
-        desc = f"Computing CVs for {cfg.name}"
-    ):
-        cv = model(data)
-        cv_list.append(cv)
-    cv_list = torch.stack(cv_list)
+    cv = model(projection_dataset)
     for i in range(cv_dim):
         wandb.log({
-            f"cv/cv{i}/min": cv_list[:, i].min(),
-            f"cv/cv{i}/max": cv_list[:, i].max(),
-            f"cv/cv{i}/std": cv_list[:, i].std()
+            f"cv/cv{i}/min": cv[:, i].min(),
+            f"cv/cv{i}/max": cv[:, i].max(),
+            f"cv/cv{i}/std": cv[:, i].std()
         })
     
     # CV Normalization
-    print(f"CV range: {cv_list.min(dim=0)[0]} ~ {cv_list.max(dim=0)[0]}")
-    if cfg.name in MODEL_NAME:
-        model.set_cv_range(cv_list.min(dim=0)[0], cv_list.max(dim=0)[0], cv_list.std(dim=0)[0])
-        cv_list = model(projection_dataset)
-    else:
-        raise ValueError(f"Model {cfg.name} not found")
-    print(f"CV normalized range: {cv_list.min(dim=0)[0]} ~ {cv_list.max(dim=0)[0]}")
+    print(f"CV range: {cv.min(dim=0)[0].item()} ~ {cv.max(dim=0)[0].item()}")
+    model.set_cv_range(cv.min(dim=0)[0], cv.max(dim=0)[0], cv.std(dim=0)[0])
+    cv = model(projection_dataset)
+    print(f"CV normalized range: {cv.min(dim=0)[0].item()} ~ {cv.max(dim=0)[0].item()}")
     df = pd.DataFrame({
-        **{f'CV{i}': cv_list[:, i].detach().cpu().numpy() for i in range(cv_dim)},
+        **{f'CV{i}': cv[:, i].detach().cpu().numpy() for i in range(cv_dim)},
         'psi': psi_list.squeeze(),
         'phi': phi_list.squeeze()
     })
@@ -80,8 +69,8 @@ def plot_ad_cv(
     )
     
     # Plot CVs
-    start_state_xyz = md.load(f"../../data/alanine/c5.pdb").xyz
-    goal_state_xyz = md.load(f"../../data/alanine/c7ax.pdb").xyz
+    start_state_xyz = md.load(f"../simulation/data/alanine/c5.pdb").xyz
+    goal_state_xyz = md.load(f"../simulation/data/alanine/c7ax.pdb").xyz
     start_state = torch.tensor(start_state_xyz)
     goal_state = torch.tensor(goal_state_xyz)
     phi_start = compute_dihedral_torch(start_state[:, ALDP_PHI_ANGLE])

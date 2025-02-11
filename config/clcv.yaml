@@ -11,7 +11,7 @@ model: {
   }
 }
 data:
-  dir: /home/shpark/prj-cmd/data
+  dir: ../simulation/dataset
   molecule: alanine
   temperature: 300.0
   version: cl-10n-v3

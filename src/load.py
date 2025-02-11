@@ -1,14 +1,13 @@
+import os
 import torch
 import wandb
 
 from torch import optim
 from omegaconf import OmegaConf
-
-# from mlcolvar.cvs import DeepTDA
 from mlcolvar.data import DictDataset, DictModule
 
 from .util import *
-from .dataset import *
+from .data import *
 from .model import *
 
 
@@ -22,18 +21,13 @@ model_dict = {
     "vde": VariationalDynamicsEncoder
 }
 
-ALDP_PHI_ANGLE = [4, 6, 8, 14]
-ALDP_PSI_ANGLE = [6, 8, 14, 16]
-ALANINE_HEAVY_ATOM_IDX = [1, 4, 5, 6, 8, 10, 14, 15, 16, 18]
-ALANINE_BACKBONE_ATOM_IDX = [1, 4, 6, 8, 10, 14, 16, 18]
-
 
 def load_model(cfg):
     if cfg.name == "deeptica":
         model = DeepTICA(
             layers = cfg.model.layers,
             n_cvs = cfg.model.n_cvs,
-            options = {'nn': {'activation': 'tanh'} }
+            options = dict(cfg.model.options)
         )
     
     elif cfg.name == "gnncv-tica":
@@ -67,6 +61,7 @@ def load_model(cfg):
     print(model)
     return model
 
+
 def load_lightning_logger(cfg):
     if cfg.trainer.logger.name == "wandb":
         from lightning.pytorch.loggers import WandbLogger
@@ -87,9 +82,17 @@ def load_lightning_logger(cfg):
         
     return lightning_logger
 
+
 def load_data(cfg):
+    data_dir = os.path.join(
+        cfg.data.dir,
+        cfg.data.molecule,
+        str(cfg.data.temperature),
+        cfg.data.version
+    )
+    
     if cfg.name == "clcv":
-        custom_dataset = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/cl-distance.pt")
+        custom_dataset = torch.load(os.path.join(data_dir, "cl-distance.pt"))
         dataset = DictDataset({
             "data": custom_dataset.x,
             "positive": custom_dataset.x_augmented,
@@ -98,8 +101,8 @@ def load_data(cfg):
         datamodule = DictModule(dataset,lengths=[0.8,0.2])
 
     elif cfg.name in ["deeplda", "deeptda"]:
-        custom_data = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/cl-distance.pt")
-        custom_label = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/label.pt")
+        custom_data = torch.load(os.path.join(data_dir, "distance.pt"))
+        custom_label = torch.load(os.path.join(data_dir, "label.pt"))
         dataset = DictDataset({
             "data": custom_data,
             "labels": custom_label
@@ -107,8 +110,8 @@ def load_data(cfg):
         datamodule = DictModule(dataset,lengths=[0.8,0.2])
         
     elif cfg.name == "deeptica":
-        custom_data = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/cl-distance.pt")
-        custom_data_lag = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/cl-distance-timelag.pt")
+        custom_data = torch.load(os.path.join(data_dir, "distance.pt"))
+        custom_data_lag = torch.load(os.path.join(data_dir, "distance-timelag.pt"))
         dataset = DictDataset({
             "data": custom_data,
             "data_lag": custom_data_lag,
@@ -118,17 +121,16 @@ def load_data(cfg):
         datamodule = DictModule(dataset,lengths=[0.8,0.2])
     
     elif cfg.name == "autoencoder":
-        data = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/cl-xyz-aligned.pt")
-        backbone_atom_data = data[:, ALANINE_BACKBONE_ATOM_IDX]
+        custom_data = torch.load(os.path.join(data_dir, "xyz-aligned.pt"))
+        backbone_atom_data = custom_data[:, ALANINE_BACKBONE_ATOM_IDX]
         custom_dataset = DictDataset({
             "data": backbone_atom_data.reshape(backbone_atom_data.shape[0], -1),
         })
         datamodule = DictModule(custom_dataset,lengths=[0.8,0.2])
     
     elif cfg.name == "timelagged-autoencoder":
-        custom_data = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/cl-xyz-aligned.pt")
-        custom_data_lag = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/cl-xyz-aligned-timelag.pt")
-        
+        custom_data = torch.load(os.path.join(data_dir, "xyz-aligned.pt"))
+        custom_data_lag = torch.load(os.path.join(data_dir, "xyz-aligned-timelag.pt"))
         backbone_atom_data = custom_data[:, ALANINE_HEAVY_ATOM_IDX]
         backbone_atom_data_lag = custom_data_lag[:, ALANINE_HEAVY_ATOM_IDX]
         backbone_atom_data_lag.requires_grad = True
@@ -138,20 +140,20 @@ def load_data(cfg):
         })
         datamodule = DictModule(custom_dataset,lengths=[0.8,0.2])
     
-    elif cfg.name in ["gnncv-tica"]:
+    elif cfg.name == "gnncv-tica":
         import mlcolvar.graph as mg
         mg.utils.torch_tools.set_default_dtype('float32')
-        dataset = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/graph-dataset.pt")
+        graph_dataset = torch.load(os.path.join(data_dir, "graph-dataset.pt"))
         datasets = mg.utils.timelagged.create_timelagged_datasets(
-            dataset, lag_time=2
+            graph_dataset, lag_time=2
         )
         datamodule = mg.data.GraphCombinedDataModule(
             datasets, random_split=False, batch_size=5000
         )
     
     elif cfg.name == "vde":
-        custom_data = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/cl-distance.pt")
-        custom_data_lag = torch.load(f"../../data/dataset/{cfg.data.molecule}/{cfg.data.temperature}/{cfg.data.version}/cl-distance-timelag.pt")
+        custom_data = torch.load(os.path.join(data_dir, "distance-aligned.pt"))
+        custom_data_lag = torch.load(os.path.join(data_dir, "distance-timelag.pt"))
         dataset = DictDataset({
             "data": custom_data,
             "target": custom_data_lag,
@@ -161,6 +163,6 @@ def load_data(cfg):
     else:
         raise ValueError(f"Data not found for model {cfg.name}")
     
-    print(">> Data")
+    print(">> Dataset")
     print(datamodule)
     return datamodule

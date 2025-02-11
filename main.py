@@ -40,7 +40,7 @@ def main(cfg):
         enable_checkpointing=False
     )
     trainer.fit(model, datamodule)
-    logger.info(">> Training complete")
+    logger.info(">> Training complete.!!")
     
     # Plot CVs
     model.eval()
@@ -71,7 +71,7 @@ def main(cfg):
     wandb.finish()
     return
 
+
 if __name__ == "__main__":
-    # torch.manual_seed(41)
     torch.set_float32_matmul_precision('high')
     main()

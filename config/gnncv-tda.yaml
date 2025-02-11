@@ -17,7 +17,7 @@ model: {
     'activation': 'Tanh',
 }
 data:
-  dir: /home/shpark/prj-cmd/data
+  dir: ../simulation/dataset
   molecule: alanine
   temperature: 300.0
   version: graph-1n-v1

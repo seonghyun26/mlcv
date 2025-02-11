@@ -16,8 +16,7 @@ class CL_dataset(Dataset):
         self.temperature = temperature_list
         
     def __getitem__(self, index):
-	    return self.x[index], self.x_augmented[index], self.x_augmented_hard[index], self.temperature[index]
- 
+        return self.x[index], self.x_augmented[index], self.x_augmented_hard[index], self.temperature[index]
+
     def __len__(self):
-	    return self.x.shape[0]
- 
+        return self.x.shape[0]

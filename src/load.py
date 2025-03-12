@@ -91,23 +91,18 @@ def load_data(cfg):
         cfg.data.version
     )
     
-    if cfg.model.name == "clcv":
-        custom_dataset = torch.load(os.path.join(data_dir, "cl-distance.pt"))
-        dataset = DictDataset({
-            "data": custom_dataset.x,
-            "positive": custom_dataset.x_augmented,
-            "negative": custom_dataset.x_augmented_hard,
-        })
-        datamodule = DictModule(dataset,lengths=[0.8,0.2])
-
-    elif cfg.model.name in ["deeplda", "deeptda"]:
+    if cfg.model.name in ["deeplda", "deeptda"]:
         custom_data = torch.load(os.path.join(data_dir, "distance.pt"))
         custom_label = torch.load(os.path.join(data_dir, "label.pt"))
         dataset = DictDataset({
             "data": custom_data,
             "labels": custom_label
         })
-        datamodule = DictModule(dataset,lengths=[0.8,0.2])
+        datamodule = DictModule(
+            dataset = dataset,
+            lengths = [0.8,0.2],
+            batch_size=cfg.model.trainer.batch_size
+        )
         
     elif cfg.model.name == "deeptica":
         custom_data = torch.load(os.path.join(data_dir, "distance.pt"))
@@ -118,15 +113,23 @@ def load_data(cfg):
             "weights": torch.ones(custom_data.shape[0], dtype=torch.float32, device=custom_data.device),
             "weights_lag": torch.ones(custom_data_lag.shape[0], dtype=torch.float32, device=custom_data_lag.device)
         })
-        datamodule = DictModule(dataset,lengths=[0.8,0.2])
+        datamodule = DictModule(
+            dataset = dataset,
+            lengths = [0.8,0.2],
+            batch_size=cfg.model.trainer.batch_size
+        )
     
     elif cfg.model.name == "autoencoder":
         custom_data = torch.load(os.path.join(data_dir, "xyz-aligned.pt"))
         backbone_atom_data = custom_data[:, ALANINE_BACKBONE_ATOM_IDX]
-        custom_dataset = DictDataset({
+        dataset = DictDataset({
             "data": backbone_atom_data.reshape(backbone_atom_data.shape[0], -1),
         })
-        datamodule = DictModule(custom_dataset,lengths=[0.8,0.2])
+        datamodule = DictModule(
+            dataset = dataset,
+            lengths = [0.8,0.2],
+            batch_size=cfg.model.trainer.batch_size
+        )
     
     elif cfg.model.name == "timelagged-autoencoder":
         custom_data = torch.load(os.path.join(data_dir, "xyz-aligned.pt"))
@@ -134,11 +137,15 @@ def load_data(cfg):
         backbone_atom_data = custom_data[:, ALANINE_HEAVY_ATOM_IDX]
         backbone_atom_data_lag = custom_data_lag[:, ALANINE_HEAVY_ATOM_IDX]
         backbone_atom_data_lag.requires_grad = True
-        custom_dataset = DictDataset({
+        dataset = DictDataset({
             "data": backbone_atom_data.reshape(backbone_atom_data.shape[0], -1),
             "target": backbone_atom_data_lag.reshape(backbone_atom_data.shape[0], -1),
         })
-        datamodule = DictModule(custom_dataset,lengths=[0.8,0.2])
+        datamodule = DictModule(
+            dataset = dataset,
+            lengths = [0.8,0.2],
+            batch_size=cfg.model.trainer.batch_size
+        )
     
     elif cfg.model.name == "gnncv-tica":
         import mlcolvar.graph as mg
@@ -148,7 +155,9 @@ def load_data(cfg):
             graph_dataset, lag_time=2
         )
         datamodule = mg.data.GraphCombinedDataModule(
-            datasets, random_split=False, batch_size=5000
+            datasets,
+            random_split = False,
+            batch_size = cfg.model.trainer.batch_size
         )
     
     elif cfg.model.name == "vde":
@@ -158,7 +167,11 @@ def load_data(cfg):
             "data": custom_data,
             "target": custom_data_lag,
         })
-        datamodule = DictModule(dataset,lengths=[0.8,0.2])
+        datamodule = DictModule(
+            dataset = dataset,
+            lengths = [0.8,0.2],
+            batch_size=cfg.model.trainer.batch_size
+        )
     
     else:
         raise ValueError(f"Data not found for model {cfg.model.name}")
@@ -166,3 +179,21 @@ def load_data(cfg):
     print(">> Dataset")
     print(datamodule)
     return datamodule
+
+
+def load_checkpoint(cfg, model):
+    checkpoint_path = f"./model/{cfg.model.name}/{cfg.data.version}"
+    
+    if not "checkpoint" in cfg.model or cfg.model["checkpoint"]:
+        raise ValueError(f"Checkpoint path disabled, check config")
+    
+    if cfg.model.name == "deeplda":
+        model.load_state_dict(torch.load(cfg.model.checkpoint_path))
+    
+    elif cfg.model.name == "deeptda":
+        model.load_state_dict(torch.load(cfg.model.checkpoint_path))
+    
+    else:
+        raise ValueError(f"Checkpoint not found for model {cfg.model.name}")
+    
+    return model

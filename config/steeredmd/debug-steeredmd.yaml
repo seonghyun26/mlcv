@@ -1,0 +1,28 @@
+molecule: alanine
+start_state: c5
+goal_state: c7ax
+sample_num: 64
+simulation:
+  k: 10
+  time_horizon: 1000
+  force_version: v1
+  friction: 0.001
+  timestep: 1
+  force_field: ["amber99sbildn.xml", "tip3p.xml"]
+  temperature: 300
+  platform: OpenCL
+  precision: mixed
+# metrics:
+#   ram:
+#     use: True
+#   energy:
+#     use: True
+#   projection:
+#     use: True
+#     gridsize: 100
+
+#     bound_use: True
+#     contour_plot: True
+#     cv_index: 0
+#     number_of_bins: 10
+#     threshold: 0.01

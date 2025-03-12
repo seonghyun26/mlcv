@@ -1,3 +1,4 @@
 defaults:
-- data: alanine-1n-random
-- model: deeplda
+- data: debug-data
+- model: debug-model
+- steeredmd: debug-steeredmd

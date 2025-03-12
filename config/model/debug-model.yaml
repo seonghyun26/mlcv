@@ -1,0 +1,31 @@
+name: deeplda
+checkpoint: False
+representation: heavy_atom_distance
+model: {
+  layers: [45, 30, 15, 5],
+  n_states: 2,
+  options: {
+    norm_in: {
+    },
+    nn: {
+      activation: "relu"
+    },
+    lda: {
+      mode: "standard"
+    },
+  },
+}
+trainer:
+  early_stopping: {
+    monitor: "valid_loss",
+    min_delta: 0.1,
+    patience: 50
+  }
+  batch_size: 2000
+  max_epochs: 2000
+logger:
+  name: wandb
+  project: mlcv
+  log_model: False
+  tags:
+  - debug

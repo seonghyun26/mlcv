@@ -1,6 +1,7 @@
 molecule: alanine
 start_state: c5
 goal_state: c7ax
+seed: 0
 sample_num: 64
 simulation:
   k: 10

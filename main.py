@@ -53,8 +53,8 @@ def main(cfg):
             os.makedirs(checkpoint_path)
         torch.save(model.state_dict(), checkpoint_path + "/final.pt")
         
-        example_input = torch.rand(1, cfg.model.input_dim)
-        traced_script_module = torch.jit.trace(model, datamodule.dataset["data"].shape[1])
+        random_input = torch.rand(1, datamodule.dataset["data"].shape[1])
+        traced_script_module = torch.jit.trace(model, random_input)
         traced_script_module.save(checkpoint_path + "/final-jit.pt")
         logger.info(f"Model saved at {checkpoint_path}")
     

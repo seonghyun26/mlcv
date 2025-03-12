@@ -1,5 +1,38 @@
 import torch 
+import numpy as np
 
+def compute_dihedral(positions):
+    if isinstance(positions, torch.Tensor):
+        angles = compute_dihedral_torch(positions)
+    
+    elif isinstance(positions, np.ndarray):
+        angles = compute_dihedral_numpy(positions)
+    
+    else:
+        raise ValueError("Type not supported for diehdral computation")
+
+    return angles
+
+def compute_dihedral_numpy(positions):
+    """http://stackoverflow.com/q/20305272/1128289"""
+    def dihedral(p):
+        if not isinstance(p, np.ndarray):
+            p = p.numpy()
+        b = p[:-1] - p[1:]
+        b[0] *= -1
+        v = np.array([v - (v.dot(b[1]) / b[1].dot(b[1])) * b[1] for v in [b[0], b[2]]])
+        
+        # Normalize vectors
+        v /= np.sqrt(np.einsum('...i,...i', v, v)).reshape(-1, 1)
+        b1 = b[1] / np.linalg.norm(b[1])
+        x = np.dot(v[0], v[1])
+        m = np.cross(v[0], b1)
+        y = np.dot(m, v[1])
+        
+        return np.arctan2(y, x)
+    
+    return np.array(list(map(dihedral, positions)))
+    
 
 def compute_dihedral_torch(
     positions: torch.Tensor,

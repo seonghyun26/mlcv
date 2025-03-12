@@ -160,3 +160,20 @@ class SteeredMDSimulation:
     def reset(self):
         for i in range(self.sample_num):
             self.md_simulation_list[i].reset()
+
+
+class MetadynamicsSimulation:
+    def __init__(
+        self,
+        cfg,
+        model,
+        seed = 0,
+    ):
+        self.seed = seed
+        self.model = model
+        
+        self.molecule = cfg.data.molecule
+        self.start_state = cfg.metadynamics.start_state
+        self.goal_state = cfg.metadynamics.goal_state
+
+        self._init_md_simulation_list(cfg)

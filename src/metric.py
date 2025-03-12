@@ -10,9 +10,10 @@ import mdtraj as md
 
 from tqdm import tqdm
 
-# from .utils import *
-# from .simulation import init_simulation, set_simulation
-from .util.plot import plot_ad_potential, plot_dw_potential, plot_ad_cv
+from .util.constant import *
+from .util.plot import plot_ad_traj, plot_ad_cv
+from .util.angle import compute_dihedral
+from .util.rotate import kabsch_rmsd
 
 pairwise_distance = torch.cdist
 
@@ -53,14 +54,14 @@ def compute_thp(
     hit_index = []
     
     if molecule == "alanine":
-        psi_goal = compute_dihedral_torch(goal_state[0, ALDP_PSI_ANGLE].reshape(-1, len(ALDP_PSI_ANGLE), 3))
-        phi_goal = compute_dihedral_torch(goal_state[0, ALDP_PHI_ANGLE].reshape(-1, len(ALDP_PHI_ANGLE), 3))
+        psi_goal = compute_dihedral(goal_state[0, ALDP_PSI_ANGLE].reshape(-1, len(ALDP_PSI_ANGLE), 3))
+        phi_goal = compute_dihedral(goal_state[0, ALDP_PHI_ANGLE].reshape(-1, len(ALDP_PHI_ANGLE), 3))
         for i in tqdm(
             range(sample_num),
             desc = f"Computing THP for {trajectory_list.shape[0]} trajectories"
         ):
-            psi = compute_dihedral_torch(trajectory_list[i, :, ALDP_PSI_ANGLE])
-            phi = compute_dihedral_torch(trajectory_list[i, :, ALDP_PHI_ANGLE])
+            psi = compute_dihedral(trajectory_list[i, :, ALDP_PSI_ANGLE])
+            phi = compute_dihedral(trajectory_list[i, :, ALDP_PHI_ANGLE])
             psi_hit_distance = torch.abs(psi - psi_goal)
             phi_hit_distance = torch.abs(phi - phi_goal)
             cv_distance = torch.sqrt(psi_hit_distance ** 2 + phi_hit_distance ** 2)
@@ -76,8 +77,8 @@ def compute_thp(
                 hit_index.append(-1)
                 
         hit_rate /= sample_num
-        hit_mask = torch.tensor(hit_mask, dtype=torch.bool, device=device)
-        hit_index = torch.tensor(hit_index, dtype=torch.int32, device=device)
+        hit_mask = torch.tensor(hit_mask)
+        hit_index = torch.tensor(hit_index, dtype=torch.int32)
 
     elif molecule == "chignolin":
         raise NotImplementedError(f"THP for molecule {molecule} to be implemented")
@@ -89,9 +90,7 @@ def compute_thp(
 
 
 def compute_epd(cfg, trajectory_list, goal_state, hit_mask, hit_index):
-    molecule = cfg.steeredmd.molecule
     atom_num = cfg.data.atom
-    sample_num = trajectory_list.shape[0]
     unit_scale_factor = 1000
     hit_trajectory = trajectory_list[hit_mask]
     hit_path_num = hit_mask.sum().item()
@@ -134,19 +133,13 @@ def compute_energy(cfg, trajectory_list, goal_state, hit_mask, hit_index):
                 trajectory_list[hit_mask],
                 desc=f"Computing energy for {trajectory_list[hit_mask].shape[0]} hitting trajectories"
             ):
-                # if hit_mask[traj_idx]:
                 energy_trajectory = potential_energy(cfg, trajectory)
                 path_energy_list.append(energy_trajectory)
             path_energy_list = np.array(path_energy_list)
             
             path_maximum_energy = np.max(path_energy_list, axis=1)
             path_final_energy_error = np.array(path_energy_list[:, -1]) - goal_state_energy
-        elif molecule == "double-well":
-            synthetic = Synthetic()
-            path_energy_list = [synthetic.potential(trajectory) for trajectory in trajectory_list]
-            path_energy_list = np.array(path_energy_list)
-            path_maximum_energy = np.max(path_energy_list, axis=1)
-            path_final_energy_error = np.array(path_energy_list[:, -1]) - synthetic.potential(goal_state)
+
         else: 
             raise ValueError(f"Energy for molecule {molecule} TBA")
     except Exception as e:
@@ -157,48 +150,6 @@ def compute_energy(cfg, trajectory_list, goal_state, hit_mask, hit_index):
     
     return path_maximum_energy.mean(), path_energy_list[:, -1].mean(), path_final_energy_error.mean()
 
-def plot_ram(cfg, trajectory_list, hit_mask, hit_index, epoch):
-    molecule = cfg.steeredmd.molecule
-    hit_path_num = hit_mask.sum().item()
-    
-    if molecule == "alanine":
-        # Load start, goal state and compute phi, psi
-        start_state_xyz = md.load(f"./data/{cfg.steeredmd.molecule}/{cfg.steeredmd.start_state}.pdb").xyz
-        goal_state_xyz = md.load(f"./data/{cfg.steeredmd.molecule}/{cfg.steeredmd.goal_state}.pdb").xyz
-        start_state = torch.tensor(start_state_xyz)
-        goal_state = torch.tensor(goal_state_xyz)
-        phi_start = compute_dihedral_torch(start_state[:, ALDP_PHI_ANGLE])
-        psi_start = compute_dihedral_torch(start_state[:, ALDP_PSI_ANGLE])
-        phi_goal = compute_dihedral_torch(goal_state[:, ALDP_PHI_ANGLE])
-        psi_goal = compute_dihedral_torch(goal_state[:, ALDP_PSI_ANGLE])
-    
-        # Compute phi, psi from trajectory_list
-        phi_traj_list = [compute_dihedral_torch(trajectory[:, ALDP_PHI_ANGLE]) for trajectory in trajectory_list]
-        psi_traj_list = [compute_dihedral_torch(trajectory[:, ALDP_PSI_ANGLE]) for trajectory in trajectory_list]
-        
-        ram_plot_img = plot_ad_traj(
-            traj_dihedral = (phi_traj_list, psi_traj_list),
-            start_dihedral = (phi_start, psi_start),
-            goal_dihedral = (phi_goal, psi_goal),
-            type = "all"
-        )
-        
-        hit_phi_traj_list = [phi_traj_list[i][:hit_index[i]] for i in range(len(phi_traj_list)) if hit_mask[i]]
-        hit_psi_traj_list = [psi_traj_list[i][:hit_index[i]] for i in range(len(psi_traj_list)) if hit_mask[i]]
-        transition_path_plot_img = plot_ad_traj(
-            traj_dihedral = (hit_phi_traj_list, hit_psi_traj_list),
-            start_dihedral = (phi_start, psi_start),
-            goal_dihedral = (phi_goal, psi_goal),
-            type = "hits"
-        )
-
-    elif molecule == "chignolin":
-        raise ValueError(f"Projection for molecule {molecule} TBA...")
-    
-    else:
-        raise ValueError(f"Ramachandran plot for molecule {molecule} TBA...")
-    
-    return wandb.Image(ram_plot_img), wandb.Image(transition_path_plot_img)
 
 def compute_projection(cfg, model_wrapper, epoch):
     def map_range(x, in_min, in_max):
@@ -265,10 +216,10 @@ def compute_projection(cfg, model_wrapper, epoch):
         goal_state_xyz = md.load(f"./data/{cfg.steeredmd.molecule}/{cfg.steeredmd.goal_state}.pdb").xyz
         start_state = torch.tensor(start_state_xyz)
         goal_state = torch.tensor(goal_state_xyz)
-        phi_start = compute_dihedral_torch(start_state[:, ALDP_PHI_ANGLE])
-        psi_start = compute_dihedral_torch(start_state[:, ALDP_PSI_ANGLE])
-        phi_goal = compute_dihedral_torch(goal_state[:, ALDP_PHI_ANGLE])
-        psi_goal = compute_dihedral_torch(goal_state[:, ALDP_PSI_ANGLE])
+        phi_start = compute_dihedral(start_state[:, ALDP_PHI_ANGLE])
+        psi_start = compute_dihedral(start_state[:, ALDP_PSI_ANGLE])
+        phi_goal = compute_dihedral(goal_state[:, ALDP_PHI_ANGLE])
+        psi_goal = compute_dihedral(goal_state[:, ALDP_PSI_ANGLE])
         
         projection_img = plot_ad_cv(
             phi = phis,

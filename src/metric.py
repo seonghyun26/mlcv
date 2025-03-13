@@ -137,35 +137,38 @@ def compute_energy(
     hit_mask
 ):
     molecule = cfg.steeredmd.molecule
-    sample_num = trajectory_list.shape[0]
-    path_length = trajectory_list.shape[1]
     
     try:
         if molecule == "alanine":
-            # goal_state_file_path = f"data/{cfg.data.molecule}/{cfg.steeredmd.goal_state}.pdb"
-            # goal_simulation = init_simulation(cfg, goal_state_file_path)
-            # goal_state_energy = goal_simulation.context.getState(getEnergy=True).getPotentialEnergy()._value
-            
-            path_energy_list = []
-            for trajectory in tqdm(
-                trajectory_list[hit_mask],
-                desc=f"Computing energy for {trajectory_list[hit_mask].shape[0]} hitting trajectories"
-            ):
-                energy_trajectory = potential_energy(cfg, trajectory)
-                path_energy_list.append(energy_trajectory)
-            
-            path_energy_list = np.array(path_energy_list)
-            path_maximum_energy = np.max(path_energy_list, axis=1)
-
+            if trajectory_list[hit_mask].shape[0] == 0:
+                path_max_energy = None
+                path_final_energy = None
+            else:
+                path_energy_list = []
+                for trajectory in tqdm(
+                    trajectory_list[hit_mask],
+                    desc=f"Computing energy for {trajectory_list[hit_mask].shape[0]} hitting trajectories"
+                ):
+                    energy_trajectory = potential_energy(cfg, trajectory)
+                    path_energy_list.append(energy_trajectory)
+                
+                path_energy_list = np.array(path_energy_list)
+                path_maximum_energy = np.max(path_energy_list, axis=1)
+                path_max_energy = path_maximum_energy.mean()
+                path_final_energy = path_energy_list[:, -1].mean()
+        
+        elif molecule == "chignolin":
+            raise NotImplementedError(f"Energy for molecule {molecule} TBA")
+        
         else: 
-            raise ValueError(f"Energy for molecule {molecule} TBA")
+            raise ValueError(f"Energy for molecule {molecule} not implemented")
     
     except Exception as e:
         print(f"Error in computing energy: {e}")
-        path_maximum_energy = np.ones(sample_num) * 10000
-        path_energy_list = np.ones((sample_num, path_length)) * 10000
+        path_max_energy = None
+        path_final_energy = None
     
-    return path_maximum_energy.mean(), path_energy_list[:, -1].mean()
+    return path_max_energy, path_final_energy
 
 
 def compute_jacobian(cfg, model_wrapper, epoch):

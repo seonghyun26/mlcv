@@ -24,7 +24,7 @@ def eval(cfg, model, logger, datamodule, checkpoint_path):
 
 def steered_md(cfg, model, logger, checkpoint_path):
     steered_md_result = {}
-    for repeat_idx in range(1, cfg.steeredmd.repeat):
+    for repeat_idx in range(0, cfg.steeredmd.repeat):
         np.random.seed(repeat_idx)
         torch.manual_seed(repeat_idx)
         logger.info(f">> Steered MD evaluation #{repeat_idx}")
@@ -37,8 +37,14 @@ def steered_md(cfg, model, logger, checkpoint_path):
     steered_md_result["steered_md/thp/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/thp")])
     steered_md_result["steered_md/epd/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/epd")])
     steered_md_result["steered_md/rmsd/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/rmsd")])
-    steered_md_result["steered_md/max_energy/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/max_energy")])
-    steered_md_result["steered_md/final_energy/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/final_energy")])
+    max_energy_list = [value for key, value in steered_md_result.items() if key.startswith("steered_md/max_energy") and value is not None]
+    if len(max_energy_list) > 0:
+        steered_md_result["steered_md/max_energy/average"] = np.mean(max_energy_list) 
+    final_energy_list = [value for key, value in steered_md_result.items() if key.startswith("steered_md/final_energy") and value is not None]
+    if len(final_energy_list) > 0:
+        steered_md_result["steered_md/final_energy/average"] = np.mean(final_energy_list)
+        
+    logger.info(f">> Steered MD average result: {steered_md_result}")
         
     return steered_md_result
 

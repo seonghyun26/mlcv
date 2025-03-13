@@ -1,10 +1,10 @@
 molecule: alanine
 start_state: c5
 goal_state: c7ax
-seed: 0
+repeat: 2
 sample_num: 64
 simulation:
-  k: 10
+  k: 100
   time_horizon: 1000
   force_version: v1
   friction: 0.001

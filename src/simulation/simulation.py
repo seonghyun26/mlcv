@@ -1,14 +1,8 @@
 import torch
-import numpy as np
 
-
-from openmm import app
 from openmm import *
 from openmm.app import *
 from openmm.unit import *
-from openmmtools.integrators import VVVRIntegrator
-
-import openmm as mm
 import openmm.unit as unit
 
 from tqdm import tqdm
@@ -112,9 +106,7 @@ class SteeredMDSimulation:
         self,
         cfg,
         model,
-        seed = 0,
     ):
-        self.seed = seed
         self.model = model
         
         self.molecule = cfg.data.molecule
@@ -128,7 +120,7 @@ class SteeredMDSimulation:
         dynamics = None
         molecule = cfg.data.molecule
         if molecule == "alanine":
-            dynamics = SteeredAlanine(cfg, self.model, self.seed)
+            dynamics = SteeredAlanine(cfg, self.model)
         else:
             raise ValueError(f"Molecule {molecule} not found")
         
@@ -136,7 +128,7 @@ class SteeredMDSimulation:
 
     def _init_md_simulation_list(self, cfg):
         md_simulation_list = []
-        for _ in tqdm(
+        for idx in tqdm(
             range(self.sample_num),
             desc="Initializing MD Simulation",
         ):
@@ -167,9 +159,7 @@ class MetadynamicsSimulation:
         self,
         cfg,
         model,
-        seed = 0,
     ):
-        self.seed = seed
         self.model = model
         
         self.molecule = cfg.data.molecule

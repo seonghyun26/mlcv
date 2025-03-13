@@ -50,15 +50,15 @@ class Alanine(BaseDynamics):
         else:
             raise ValueError(f"Platform {self.cfg.steeredmd.simulation.platform} not found")
         self.simulation = app.Simulation(
-            start_pdb.topology,
+            pdb.topology,
             self.system,
             integrator,
             platform,
             properties
         )
-        simulation.context.setPositions(pdb.positions)
+        self.simulation.context.setPositions(pdb.positions)
 
-        return pdb, integrator, simulation, external_force
+        return pdb, integrator, self.simulation, external_force
 
 
 class SteeredAlanine:
@@ -66,10 +66,8 @@ class SteeredAlanine:
         self,
         cfg,
         model,
-        seed
     ):
         self.cfg = cfg
-        self.seed = seed
         self.model = model
         self.device = model.device
         
@@ -166,7 +164,7 @@ class SteeredAlanine:
             self.timestep,
         )
         integrator.setConstraintTolerance(0.00001)
-        integrator.setRandomNumberSeed(self.seed)
+        integrator.setRandomNumberSeed(0)
         
         return integrator
     

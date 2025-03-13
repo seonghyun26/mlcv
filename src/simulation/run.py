@@ -1,14 +1,13 @@
-import os
-import hydra
+import torch
+import numpy as np
 
 from tqdm import tqdm 
 from .simulation import *
 
-def simulate_steered_md(cfg, model, logger, seed, checkpoint_path):
+def simulate_steered_md(cfg, model, logger, repeat_idx, checkpoint_path):
     steered_md_simulation = SteeredMDSimulation(
         cfg = cfg,
         model = model,
-        seed = seed
     )
     time_horizon = cfg.steeredmd.simulation.time_horizon
     sample_num = cfg.steeredmd.sample_num
@@ -20,8 +19,8 @@ def simulate_steered_md(cfg, model, logger, seed, checkpoint_path):
             desc=f"Genearting {sample_num} trajectories for {time_horizon} steps",
         ):
             position = steered_md_simulation.report()
-            # position = np.array([list(p) for p in position], dtype=np.float32)
             position = torch.tensor([list(p) for p in position], dtype=torch.float32, device = model.device)
+            # position = np.array([list(p) for p in position], dtype=np.float32)
             position_list.append(position)
             steered_md_simulation.step(step)
         
@@ -32,7 +31,7 @@ def simulate_steered_md(cfg, model, logger, seed, checkpoint_path):
         else:
             raise ValueError(f"Type {type(position_list)} not supported")
         
-        save_trajectory(trajectory_list, logger, checkpoint_path)
+        save_trajectory(trajectory_list, logger, checkpoint_path, repeat_idx)
     
     except Exception as e:
         logger.error(f"Error in generating trajectory: {e}")
@@ -40,11 +39,11 @@ def simulate_steered_md(cfg, model, logger, seed, checkpoint_path):
     return trajectory_list
 
 
-def simluate_metadynamics(cfg, model, logger, seed, checkpoint_path):
+def simluate_metadynamics(cfg, model, logger, repeat_idx, checkpoint_path):
     metadynamics_simulation = MetadynamicsSimulation(
         cfg = cfg,
         model = model,
-        seed = seed
+        repeat_idx = repeat_idx
     )
     time_horizon = cfg.metadynamics.simulation.time_horizon
     position_list = []
@@ -54,10 +53,10 @@ def simluate_metadynamics(cfg, model, logger, seed, checkpoint_path):
 
     return trajectory_list
 
-def save_trajectory(trajectory_list, logger, checkpoint_path):
+def save_trajectory(trajectory_list, logger, checkpoint_path, repeat_idx):
     if isinstance(trajectory_list, torch.Tensor):
         trajectory_list = trajectory_list.detach().cpu().numpy()
-    np.save(f"{checkpoint_path}/traj.npy", trajectory_list)
+    np.save(f"{checkpoint_path}/{repeat_idx}-traj.npy", trajectory_list)
     
     logger.info(f"{trajectory_list.shape[0]} trajectories saved at: {checkpoint_path}")
     return

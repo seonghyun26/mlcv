@@ -18,6 +18,17 @@ def save_plot(dir, fig):
     plt.close()
 
 
+
+def plot_angle_distribution(
+    cfg,
+    trajectory_list,
+    checkpoint_path
+):
+    molecule = cfg.steeredmd.molecule
+    
+    return
+
+
 def plot_ad_cv(
     cfg,
     model,
@@ -100,7 +111,7 @@ def plot_ad_cv(
 
 
 
-def plot_ram(cfg, trajectory_list, hit_mask, hit_index, seed, checkpoint_path):
+def plot_paths(cfg, trajectory_list, hit_mask, hit_index, seed, checkpoint_path):
     molecule = cfg.steeredmd.molecule
     
     if molecule == "alanine":

@@ -1,9 +1,6 @@
 import os
-import wandb
 import hydra
 import torch
-import random
-import string
 import logging
 import lightning
 
@@ -32,6 +29,8 @@ def main(cfg):
     
     # train
     checkpoint_path = f"./model/{cfg.model.name}/{cfg.data.version}"
+    if not os.path.exists(checkpoint_path):
+        os.makedirs(checkpoint_path)
     if not cfg.model.checkpoint:
         logger.info(">> Training...")
         metrics = MetricsCallback()
@@ -41,6 +40,7 @@ def main(cfg):
             logger=lightning_logger,
             max_epochs=cfg.model.trainer.max_epochs,
             enable_checkpointing=False,
+            log_every_n_steps=1,
         )
         trainer.fit(model, datamodule)
         model.eval()

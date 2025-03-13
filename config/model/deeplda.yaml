@@ -1,7 +1,8 @@
 name: deeplda
-input_dim: 45
+checkpoint: False
+representation: heavy_atom_distance
 model: {
-  layers: [45, 30, 30, 2],
+  layers: [45, 30, 15, 5],
   n_states: 2,
   options: {
     norm_in: {
@@ -20,6 +21,7 @@ trainer:
     min_delta: 0.1,
     patience: 50
   }
+  batch_size: 2000
   max_epochs: 2000
 logger:
   name: wandb

@@ -39,8 +39,10 @@ def plot_ad_cv(
         cv_dim = 1
     elif cfg.model.name in ["deeptica", "vde"]:
         cv_dim = cfg.model["n_cvs"]
-    elif cfg.model.name in ["autoencoder", "timelagged-autoencoder", "vde", "clcv"]:
+    elif cfg.model.name in ["autoencoder", "timelagged-autoencoder", "vde"]:
         cv_dim = cfg.model["encoder_layers"][-1]
+    elif cfg.model.name == "tbgcv":
+        cv_dim = cfg.model.model["encoder_layers"][-1]
     else:
         raise ValueError(f"Model {cfg.model.name} not found")
     
@@ -63,12 +65,13 @@ def plot_ad_cv(
             f"cv/cv{i}/max": cv[:, i].max(),
             f"cv/cv{i}/std": cv[:, i].std()
         })
+        print(f"CV {i} range: {cv[:, i].min(dim=0)[0].item()} ~ {cv[:, i].max(dim=0)[0].item()}")
     
     # CV Normalization
-    print(f"CV range: {cv.min(dim=0)[0].item()} ~ {cv.max(dim=0)[0].item()}")
     model.set_cv_range(cv.min(dim=0)[0], cv.max(dim=0)[0], cv.std(dim=0)[0])
     cv = model(projection_dataset)
-    print(f"CV normalized range: {cv.min(dim=0)[0].item()} ~ {cv.max(dim=0)[0].item()}")
+    for i in range(cv_dim):
+        print(f"CV {i} normalized range: {cv[:, i].min(dim=0)[0].item()} ~ {cv[:, i].max(dim=0)[0].item()}")
     df = pd.DataFrame({
         **{f'CV{i}': cv[:, i].detach().cpu().numpy() for i in range(cv_dim)},
         'psi': psi_list.squeeze(),

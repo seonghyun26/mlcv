@@ -4,4 +4,4 @@ from .deeptica import DeepTICA
 from .autoencoder import AutoEncoderCV
 from .vde import VariationalDynamicsEncoder
 
-from .clcv import CLCV
+from .tbg import TBGCV

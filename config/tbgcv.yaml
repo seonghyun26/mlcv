@@ -1,0 +1,4 @@
+defaults:
+- data: alanine-10n-timelag
+- model: tbgcv
+- steeredmd: steeredmd

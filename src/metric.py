@@ -171,9 +171,9 @@ def compute_energy(
     return path_max_energy, path_final_energy
 
 
-def compute_jacobian(cfg, model_wrapper, epoch):
+def compute_jacobian(cfg, model):
     molecule = cfg.steeredmd.molecule
-    device = model_wrapper.device
+    device = model.device
     
     if molecule == "alanine":
         pass
@@ -195,7 +195,7 @@ def init_simulation(cfg, pdb_file_path, frame=None):
     
     cfg_simulation = cfg.steeredmd.simulation
     integrator = LangevinIntegrator(
-        cfg_simulation.temperature * kelvin,
+        cfg_simulation.temperature * unit.kelvin,
         cfg_simulation.friction / unit.femtoseconds,
         cfg_simulation.timestep * unit.femtoseconds
     )
@@ -220,12 +220,12 @@ def set_simulation(simulation, frame):
     if frame is not None:
         atom_xyz = frame.detach().cpu().numpy()
         atom_list = [Vec3(atom[0], atom[1], atom[2]) for atom in atom_xyz]
-        current_state_openmm = Quantity(value=atom_list, unit=nanometer)
+        current_state_openmm = unit.Quantity(value=atom_list, unit=unit.nanometer)
         simulation.context.setPositions(current_state_openmm)
     else:
         raise ValueError("Frame is None")
     
-    simulation.context.setVelocities(Quantity(value=np.zeros(frame.shape), unit=nanometer/picosecond))
+    simulation.context.setVelocities(unit.Quantity(value=np.zeros(frame.shape), unit=unit.nanometer/unit.picosecond))
     
     return simulation
 

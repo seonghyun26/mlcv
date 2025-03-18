@@ -5,6 +5,6 @@ do
     CUDA_VISIBLE_DEVICES=$1 python main.py \
         --config-name deeplda \
         ++data.version=250n-v1 \
-        ++steered.simulation.k=$k
+        ++steeredmd.simulation.k=$k
     sleep 1
 done

@@ -31,7 +31,11 @@ def main(cfg):
     checkpoint_path = f"./model/{cfg.model.name}/{cfg.data.version}"
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
-    if not cfg.model.checkpoint:
+    if cfg.model.checkpoint:
+        logger.info(">> Loading model from checkpoint")
+        model.load_state_dict(torch.load(f"{checkpoint_path}/{cfg.model.checkpoint_name}.pt"))
+        model.eval()
+    else:
         logger.info(">> Training...")
         metrics = MetricsCallback()
         early_stopping = EarlyStopping(**cfg.model.trainer.early_stopping)

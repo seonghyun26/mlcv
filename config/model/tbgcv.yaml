@@ -1,5 +1,6 @@
 name: tbgcv
 checkpoint: True
+checkpoint_name: final
 representation: heavy_atom_distance
 model: {
   encoder_layers: [45, 30, 30, 2],
@@ -14,14 +15,14 @@ model: {
 trainer:
   early_stopping: {
     monitor: "valid_loss",
-    min_delta: 0.1,
-    patience: 50
+    min_delta: 0.01,
+    patience: 100
   }
   batch_size: 2000
-  max_epochs: 2000
+  max_epochs: 1000
 logger:
   name: wandb
   project: mlcv
   log_model: False
   tags:
-  - debug
+  - method

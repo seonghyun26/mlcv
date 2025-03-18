@@ -12,13 +12,13 @@ from .model import *
 
 
 model_dict = {
-    "clcv": CLCV,
     "deeplda": DeepLDA,
     "deeptda": DeepTDA,
     "deeptica": DeepTICA,
     "autoencoder": AutoEncoderCV,
     "timelagged-autoencoder": AutoEncoderCV,
-    "vde": VariationalDynamicsEncoder
+    "vde": VariationalDynamicsEncoder,
+    "tbgcv": TBGCV,
 }
 
 
@@ -140,6 +140,19 @@ def load_data(cfg):
         dataset = DictDataset({
             "data": backbone_atom_data.reshape(backbone_atom_data.shape[0], -1),
             "target": backbone_atom_data_lag.reshape(backbone_atom_data.shape[0], -1),
+        })
+        datamodule = DictModule(
+            dataset = dataset,
+            lengths = [0.8,0.2],
+            batch_size=cfg.model.trainer.batch_size
+        )
+        
+    elif cfg.model.name == "tbgcv":
+        custom_data = torch.load(os.path.join(data_dir, "distance.pt"))
+        custom_data_lag = torch.load(os.path.join(data_dir, "distance-timelag.pt"))
+        dataset = DictDataset({
+            "data": custom_data.reshape(custom_data.shape[0], -1),
+            "data_lag": custom_data_lag.reshape(custom_data.shape[0], -1),
         })
         datamodule = DictModule(
             dataset = dataset,

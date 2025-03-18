@@ -1,3 +1,4 @@
+import os
 import torch
 import wandb
 import hydra
@@ -13,10 +14,15 @@ def eval(cfg, model, logger, datamodule, checkpoint_path):
     eval_dict = {}
     eval_dict["eval/ramachandran"] = wandb.Image(plot_ad_cv(cfg, model, datamodule, checkpoint_path))
     
+    checkpoint_path = f"./model/{cfg.model.name}/{cfg.data.version}/{cfg.steeredmd.simulation.k}"
+    if not os.path.exists(checkpoint_path):
+        os.makedirs(checkpoint_path)
     eval_dict.update(steered_md(cfg, model, logger, checkpoint_path))
     # eval_dict.update(metadynamics(cfg, model, logger, checkpoint_path))
 
-    wandb.log(eval_dict)
+    keys_with_average = [key for key in eval_dict.keys() if key.endswith("average")]
+    eval_dict_avereage = {key: eval_dict[key] for key in keys_with_average}
+    wandb.log(eval_dict_avereage)
     wandb.finish()
 
     return
@@ -32,6 +38,7 @@ def steered_md(cfg, model, logger, checkpoint_path):
         steered_md_metric = evalute_steered_md(cfg, trajectory_list, logger, repeat_idx, checkpoint_path)
         
         logger.info(f">> Steered MD result: {steered_md_metric}")
+        wandb.log(steered_md_metric)
         steered_md_result.update(steered_md_metric)
         
     steered_md_result["steered_md/thp/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/thp")])

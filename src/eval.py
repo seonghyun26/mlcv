@@ -43,16 +43,17 @@ def steered_md(cfg, model, logger, checkpoint_path):
         logger.info(f">> Steered MD result: {steered_md_metric}")
         wandb.log(steered_md_metric)
         steered_md_result.update(steered_md_metric)
-        
-    steered_md_result["steered_md/thp/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/thp")])
-    steered_md_result["steered_md/epd/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/epd")])
-    steered_md_result["steered_md/rmsd/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/rmsd")])
-    max_energy_list = [value for key, value in steered_md_result.items() if key.startswith("steered_md/max_energy") and value is not None]
-    if len(max_energy_list) > 0:
-        steered_md_result["steered_md/max_energy/average"] = np.mean(max_energy_list) 
-    final_energy_list = [value for key, value in steered_md_result.items() if key.startswith("steered_md/final_energy") and value is not None]
-    if len(final_energy_list) > 0:
-        steered_md_result["steered_md/final_energy/average"] = np.mean(final_energy_list)
+    
+    if cfg.steeredmd.repeat > 0:
+        steered_md_result["steered_md/thp/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/thp")])
+        steered_md_result["steered_md/epd/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/epd")])
+        steered_md_result["steered_md/rmsd/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/rmsd")])
+        max_energy_list = [value for key, value in steered_md_result.items() if key.startswith("steered_md/max_energy") and value is not None]
+        if len(max_energy_list) > 0:
+            steered_md_result["steered_md/max_energy/average"] = np.mean(max_energy_list) 
+        final_energy_list = [value for key, value in steered_md_result.items() if key.startswith("steered_md/final_energy") and value is not None]
+        if len(final_energy_list) > 0:
+            steered_md_result["steered_md/final_energy/average"] = np.mean(final_energy_list)
         
     logger.info(f">> Steered MD average result: {steered_md_result}")
         
@@ -99,6 +100,7 @@ def sensitivity(cfg, model, logger, checkpoint_path):
     c5 = torch.load(f"../simulation/data/{cfg.data.molecule}/{cfg.steeredmd.start_state}.pt")['xyz']
     c5_input = coordinate2distance(c5)
     c5_input.requires_grad = True
+    c5_input = c5_input.to(model.device)
     c5_output = model(c5_input)
     sensitivities = torch.autograd.grad(c5_output, c5_input)[0]
     sensitivities = sensitivities / sensitivities.sum(dim=0, keepdim=True)

@@ -38,10 +38,10 @@ def plot_ad_cv(
     if cfg.model.name in ["deeplda", "deeptda"]:
         cv_dim = 1
     elif cfg.model.name in ["deeptica", "vde"]:
-        cv_dim = cfg.model["n_cvs"]
+        cv_dim = cfg.model.model["n_cvs"]
     elif cfg.model.name in ["autoencoder", "timelagged-autoencoder", "vde"]:
         cv_dim = cfg.model["encoder_layers"][-1]
-    elif cfg.model.name == "tbgcv":
+    elif cfg.model.name in ["tbgcv", "tbgcv-both"]:
         cv_dim = cfg.model.model["encoder_layers"][-1]
     else:
         raise ValueError(f"Model {cfg.model.name} not found")

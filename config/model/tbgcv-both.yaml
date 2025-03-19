@@ -1,6 +1,6 @@
-name: tbgcv
+name: tbgcv-both
 checkpoint: True
-checkpoint_name: tbgcv
+checkpoint_name: tbgcv-both
 representation: heavy_atom_distance
 model: {
   encoder_layers: [45, 30, 30, 2],

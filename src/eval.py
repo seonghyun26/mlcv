@@ -3,16 +3,19 @@ import torch
 import wandb
 import hydra
 import logging
+import matplotlib.pyplot as plt
 
 from .load import *
 from .metric import *
 from .simulation.run import simulate_steered_md, simluate_metadynamics
 from .util.plot import plot_paths
-
+from .util.convert import coordinate2distance
 
 def eval(cfg, model, logger, datamodule, checkpoint_path):
+    model.eval()
     eval_dict = {}
     eval_dict["eval/ramachandran"] = wandb.Image(plot_ad_cv(cfg, model, datamodule, checkpoint_path))
+    eval_dict["eval/sensitivity"] = wandb.Image(sensitivity(cfg, model, logger, checkpoint_path))
     
     checkpoint_path = f"./model/{cfg.model.name}/{cfg.data.version}/{cfg.steeredmd.simulation.k}"
     if not os.path.exists(checkpoint_path):
@@ -55,7 +58,6 @@ def steered_md(cfg, model, logger, checkpoint_path):
         
     return steered_md_result
 
-
 def evalute_steered_md(cfg, trajectory_list, logger, repeat_idx, checkpoint_path):
     result_dict = {}
     goal_state = load_state_file(cfg, cfg.steeredmd.goal_state, trajectory_list.device)
@@ -91,6 +93,32 @@ def evaluate_metadynamics(cfg, trajectory_list, logger, repeat_idx):
     
     return result_dict
 
+
+def sensitivity(cfg, model, logger, checkpoint_path):
+    # Compute sensitivities
+    c5 = torch.load(f"../simulation/data/{cfg.data.molecule}/{cfg.steeredmd.start_state}.pt")['xyz']
+    c5_input = coordinate2distance(c5)
+    c5_input.requires_grad = True
+    c5_output = model(c5_input)
+    sensitivities = torch.autograd.grad(c5_output, c5_input)[0]
+    sensitivities = sensitivities / sensitivities.sum(dim=0, keepdim=True)
+    
+    # Plot sensitivities
+    plt.figure(figsize=(12, 6))
+    plt.imshow(sensitivities.unsqueeze(0).detach().cpu().numpy(), aspect='auto', cmap='viridis')
+    plt.colorbar(label='Sensitivity')
+    plt.xlabel('Input distance')
+    plt.ylabel('Output dimension')
+    plt.tight_layout()
+    
+    # Save the plot
+    logger.info(f">> Sensitivity plot saved at {checkpoint_path}, highest for {sensitivities.argmax()}-th intput")
+    plot_path = os.path.join(checkpoint_path, 'sensitivity.png')
+    plt.savefig(plot_path)
+    wandb.log({"sensitivity": wandb.Image(plot_path)})
+    plt.close()
+    
+    return plot_path
 
 def load_state_file(cfg, state, device):
     if cfg.steeredmd.molecule == "alanine":

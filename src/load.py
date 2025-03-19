@@ -19,6 +19,7 @@ model_dict = {
     "timelagged-autoencoder": AutoEncoderCV,
     "vde": VariationalDynamicsEncoder,
     "tbgcv": TBGCV,
+    "tbgcv-both": TBGCV,
 }
 
 
@@ -147,7 +148,7 @@ def load_data(cfg):
             batch_size=cfg.model.trainer.batch_size
         )
         
-    elif cfg.model.name == "tbgcv":
+    elif cfg.model.name in ["tbgcv", "tbgcv-both"]:
         custom_data = torch.load(os.path.join(data_dir, "distance.pt"))
         custom_data_lag = torch.load(os.path.join(data_dir, "distance-timelag.pt"))
         dataset = DictDataset({

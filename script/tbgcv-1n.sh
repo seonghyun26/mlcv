@@ -1,6 +1,6 @@
 cd ../
 
-for k in 100 200 300 400 500 600 700;
+for k in 100 200 300 400;
 do
     CUDA_VISIBLE_DEVICES=$1 python main.py \
         --config-name tbgcv \

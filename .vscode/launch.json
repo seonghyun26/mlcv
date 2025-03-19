@@ -13,6 +13,7 @@
             "args": [
                 "--config-name", "debug",
                 "hydra.run.dir=outputs/_debug",
+                "++model.logger.tags=['debug']",
                 // "++model.checkpoint=True",
                 "++steeredmd.sample_num=4",
                 "++steeredmd.simulation.k=400",

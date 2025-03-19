@@ -35,6 +35,7 @@ def simulate_steered_md(cfg, model, logger, repeat_idx, checkpoint_path):
     
     except Exception as e:
         logger.error(f"Error in generating trajectory: {e}")
+        trajectory_list = None
 
     return trajectory_list
 

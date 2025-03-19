@@ -6,7 +6,6 @@ from openmm.unit import *
 import openmm.unit as unit
 
 from tqdm import tqdm
-from abc import abstractmethod, ABC
 from torch.distributions import Normal
 
 from .dynamics import Alanine, SteeredAlanine

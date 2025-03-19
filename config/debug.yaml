@@ -1,4 +1,4 @@
 defaults:
 - data: debug-data
-- model: deeptica
+- model: tbgcv
 - steeredmd: debug-steeredmd

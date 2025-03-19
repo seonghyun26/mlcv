@@ -20,7 +20,6 @@ def simulate_steered_md(cfg, model, logger, repeat_idx, checkpoint_path):
         ):
             position = steered_md_simulation.report()
             position = torch.tensor([list(p) for p in position], dtype=torch.float32, device = model.device)
-            # position = np.array([list(p) for p in position], dtype=np.float32)
             position_list.append(position)
             steered_md_simulation.step(step)
         

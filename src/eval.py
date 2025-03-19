@@ -102,12 +102,17 @@ def sensitivity(cfg, model, logger, checkpoint_path):
     c5_input.requires_grad = True
     c5_input = c5_input.to(model.device)
     c5_output = model(c5_input)
-    sensitivities = torch.autograd.grad(c5_output, c5_input)[0]
-    sensitivities = sensitivities / sensitivities.sum(dim=0, keepdim=True)
+    
+    sensitivities = []
+    for i in range(c5_output.shape[0]):
+        node_sensitivity = torch.autograd.grad(c5_output[i], c5_input, retain_graph=True)[0]
+        node_sensitivity = node_sensitivity / node_sensitivity.sum()
+        sensitivities.append(node_sensitivity)
+    sensitivities = torch.stack(sensitivities)
     
     # Plot sensitivities
     plt.figure(figsize=(12, 6))
-    plt.imshow(sensitivities.unsqueeze(0).detach().cpu().numpy(), aspect='auto', cmap='viridis')
+    plt.imshow(sensitivities.reshape(-1, c5_input.shape[0]).detach().cpu().numpy(), aspect='auto', cmap='viridis')
     plt.colorbar(label='Sensitivity')
     plt.xlabel('Input distance')
     plt.ylabel('Output dimension')

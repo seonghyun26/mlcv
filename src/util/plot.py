@@ -39,8 +39,8 @@ def plot_ad_cv(
         cv_dim = 1
     elif cfg.model.name in ["deeptica", "vde"]:
         cv_dim = cfg.model.model["n_cvs"]
-    elif cfg.model.name in ["autoencoder", "timelagged-autoencoder", "vde"]:
-        cv_dim = cfg.model["encoder_layers"][-1]
+    elif cfg.model.name in ["autoencoder", "tae", "vde"]:
+        cv_dim = cfg.model.model["encoder_layers"][-1]
     elif cfg.model.name in ["tbgcv", "tbgcv-both"]:
         cv_dim = cfg.model.model["encoder_layers"][-1]
     else:
@@ -92,6 +92,7 @@ def plot_ad_cv(
     c7ax = torch.load(f"../simulation/data/alanine/c7ax.pt")
     phi_start, psi_start = c5["phi"], c5["psi"]
     phi_goal, psi_goal = c7ax["phi"], c7ax["psi"]
+    
     for i in range(min(cv_dim, 4)):
         ax = axs[i]
         df.plot.hexbin(
@@ -103,6 +104,8 @@ def plot_ad_cv(
         ax.scatter(phi_start, psi_start, edgecolors="black", c="w", zorder=101, s=100)
         ax.scatter(phi_goal, psi_goal, edgecolors="black", c="w", zorder=101, s=300, marker="*")
     
+    plt.xlim(-3.15, 3.15)
+    plt.ylim(-3.15, 3.15)
     save_dir = checkpoint_path + "/cv-plot.png"
     fig.savefig(save_dir)
     print(f"CV plot saved at {save_dir}")

@@ -1,4 +1,4 @@
 defaults:
 - data: debug-data
-- model: tbgcv
+- model: tae
 - steeredmd: debug-steeredmd

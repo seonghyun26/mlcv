@@ -1,11 +1,15 @@
-name: tbgcv-both
-checkpoint: True
-checkpoint_name: cfg
-representation: heavy_atom_distance
+name: tae
+checkpoint: False
+representation: backbone_coordinate
+input_dim: 30
 model: {
-  encoder_layers: [45, 30, 30, 2],
+  encoder_layers: [30, 100, 100, 1],
   options: {
     encoder: {
+      activation: "tanh",
+      dropout: [0.5, 0.5, 0.5]
+    },
+    decoder: {
       activation: "tanh"
     },
     norm_in: {
@@ -16,7 +20,7 @@ trainer:
   early_stopping: {
     monitor: "valid_loss",
     min_delta: 0.01,
-    patience: 100
+    patience: 50
   }
   batch_size: 2000
   max_epochs: 1000
@@ -25,4 +29,4 @@ logger:
   project: mlcv
   log_model: False
   tags:
-  - method
+  - baseline

@@ -1,0 +1,4 @@
+defaults:
+- data: alanine-1n-timelag
+- model: tae
+- steeredmd: steeredmd

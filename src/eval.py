@@ -9,7 +9,7 @@ from .load import *
 from .metric import *
 from .simulation.run import simulate_steered_md, simluate_metadynamics
 from .util.plot import plot_paths
-from .util.convert import coordinate2distance
+from .util.convert import input2representation
 
 def eval(cfg, model, logger, datamodule, checkpoint_path):
     model.eval()
@@ -45,15 +45,19 @@ def steered_md(cfg, model, logger, checkpoint_path):
         steered_md_result.update(steered_md_metric)
     
     if cfg.steeredmd.repeat > 0:
-        steered_md_result["steered_md/thp/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/thp")])
-        steered_md_result["steered_md/epd/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/epd")])
-        steered_md_result["steered_md/rmsd/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/rmsd")])
+        steered_md_result["steered_md/thp/average"] = np.mean([value for key, value in steered_md_result.items() if key.startswith("steered_md/thp") and value != None])
+        epd_list = [value for key, value in steered_md_result.items() if key.startswith("steered_md/epd") and value != None]
+        if len(epd_list) > 0:
+            steered_md_result["steered_md/epd/average"] = np.mean(epd_list)
+        rmsd_list = [value for key, value in steered_md_result.items() if key.startswith("steered_md/rmsd") and value != None]
+        if len(rmsd_list) > 0:
+            steered_md_result["steered_md/rmsd/average"] = np.mean(rmsd_list)
         max_energy_list = [value for key, value in steered_md_result.items() if key.startswith("steered_md/max_energy") and value is not None]
         if len(max_energy_list) > 0:
-            steered_md_result["steered_md/max_energy/average"] = np.mean(max_energy_list) 
+            steered_md_result["steered_md/max_energy/average"] = torch.mean(max_energy_list) 
         final_energy_list = [value for key, value in steered_md_result.items() if key.startswith("steered_md/final_energy") and value is not None]
         if len(final_energy_list) > 0:
-            steered_md_result["steered_md/final_energy/average"] = np.mean(final_energy_list)
+            steered_md_result["steered_md/final_energy/average"] = torch.mean(final_energy_list)
         
     logger.info(f">> Steered MD average result: {steered_md_result}")
         
@@ -98,13 +102,13 @@ def evaluate_metadynamics(cfg, trajectory_list, logger, repeat_idx):
 def sensitivity(cfg, model, logger, checkpoint_path):
     # Compute sensitivities
     c5 = torch.load(f"../simulation/data/{cfg.data.molecule}/{cfg.steeredmd.start_state}.pt")['xyz']
-    c5_input = coordinate2distance(c5)
+    c5_input = input2representation(cfg, c5)
     c5_input.requires_grad = True
     c5_input = c5_input.to(model.device)
     c5_output = model(c5_input)
     
     sensitivities = []
-    for i in range(c5_output.shape[0]):
+    for i in range(c5_output.shape[1]):
         node_sensitivity = torch.autograd.grad(c5_output[i], c5_input, retain_graph=True)[0]
         node_sensitivity = node_sensitivity / node_sensitivity.sum()
         sensitivities.append(node_sensitivity)
@@ -112,15 +116,16 @@ def sensitivity(cfg, model, logger, checkpoint_path):
     
     # Plot sensitivities
     plt.figure(figsize=(12, 6))
-    plt.imshow(sensitivities.reshape(-1, c5_input.shape[0]).detach().cpu().numpy(), aspect='auto', cmap='viridis')
+    plt.imshow(sensitivities.reshape(c5_input.shape[1], c5_input.shape[1]).detach().cpu().numpy(), aspect='auto', cmap='viridis')
     plt.colorbar(label='Sensitivity')
     plt.xlabel('Input distance')
     plt.ylabel('Output dimension')
+    plt.yticks([])
     plt.tight_layout()
     
     # Save the plot
-    logger.info(f">> Sensitivity plot saved at {checkpoint_path}, highest for {sensitivities.argmax()}-th intput")
     plot_path = os.path.join(checkpoint_path, 'sensitivity.png')
+    logger.info(f">> Sensitivity plot saved at {plot_path}, highest for {sensitivities.argmax()}-th intput")
     plt.savefig(plot_path)
     wandb.log({"sensitivity": wandb.Image(plot_path)})
     plt.close()

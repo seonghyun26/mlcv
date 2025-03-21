@@ -124,11 +124,18 @@ def compute_epd(
         rmsd = torch.tensor(rmsd)
         rmsd = torch.mean(rmsd)
         
+        if torch.isnan(epd):
+            logger.info("EPD is NaN")
+            epd = None
+        if torch.isnan(rmsd):
+            logger.info("RMSD is NaN")
+            rmsd = None
+        
         return epd, rmsd
     
     else:
         logger.info("No hitting trajectories found")
-        return -1, -1
+        return None, None
 
 
 def compute_energy(
@@ -169,23 +176,6 @@ def compute_energy(
         path_final_energy = None
     
     return path_max_energy, path_final_energy
-
-
-def compute_jacobian(cfg, model):
-    molecule = cfg.steeredmd.molecule
-    device = model.device
-    
-    if molecule == "alanine":
-        pass
-    
-    elif molecule == "chignolin":
-        raise ValueError(f"Jacobian for molecule {molecule} TBA...")
-    
-    else:
-        raise ValueError(f"Jacobian for molecule {molecule} not supported")
-        
-    jacobian_img = None
-    return wandb.Image(jacobian_img)
 
 
 def init_simulation(cfg, pdb_file_path, frame=None):

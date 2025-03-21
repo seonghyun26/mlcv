@@ -16,8 +16,9 @@
                 "++model.logger.tags=['debug']",
                 // "++model.checkpoint=True",
                 "++steeredmd.sample_num=4",
-                "++steeredmd.simulation.k=400",
+                "++steeredmd.simulation.k=600",
                 "++steeredmd.simulation.time_horizon=100",
+                "++steeredmd.repeat=2",
             ]
         },
     ]

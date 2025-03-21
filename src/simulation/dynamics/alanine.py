@@ -8,6 +8,8 @@ import openmm.unit as unit
 from openmm import app
 from openmmtools.integrators import VVVRIntegrator
 
+from ...util.angle import compute_dihedral
+from ...util.rotate import kabsch_rmsd
 from ...util.constant import *
 from ...util.convert import input2representation
 from .dynamics import BaseDynamics, load_forcefield, load_system
@@ -129,7 +131,7 @@ class SteeredAlanine:
         if self.force_type in ["rmsd", "torsion"]:
             pass
         
-        elif self.force_type in MLCOLVAR_METHODS or ["gnncv"]:
+        elif self.force_type in MLCOLVAR_METHODS:
             if self.cfg.steeredmd.simulation.force_version == "v1":
                 current_target_mlcv = start_mlcv + (goal_mlcv - start_mlcv) * (time / self.time_horizon).value_in_unit(unit.femtosecond)
                 mlcv_difference = 0.5 * self.k * torch.linalg.norm(current_target_mlcv - current_mlcv, ord=2)
@@ -274,7 +276,7 @@ class SteeredAlanine:
             custom_cv_force.addGlobalParameter("total_time", self.time_horizon * self.timestep)
             self.system.addForce(custom_cv_force)
         
-        elif self.force_type in MLCOLVAR_METHODS or ["gnncv"]:
+        elif self.force_type in MLCOLVAR_METHODS:
             if self.cfg.steeredmd.simulation.force_version == "v1":
                 external_force = mm.CustomExternalForce(" (fx*x + fy*y + fz*z) ")
             elif self.cfg.steeredmd.simulation.force_version == "v2":

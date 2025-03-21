@@ -16,7 +16,7 @@ model_dict = {
     "deeptda": DeepTDA,
     "deeptica": DeepTICA,
     "autoencoder": AutoEncoderCV,
-    "timelagged-autoencoder": AutoEncoderCV,
+    "tae": AutoEncoderCV,
     "vde": VariationalDynamicsEncoder,
     "tbgcv": TBGCV,
     "tbgcv-both": TBGCV,
@@ -132,7 +132,7 @@ def load_data(cfg):
             batch_size=cfg.model.trainer.batch_size
         )
     
-    elif cfg.model.name == "timelagged-autoencoder":
+    elif cfg.model.name == "tae":
         custom_data = torch.load(os.path.join(data_dir, "xyz-aligned.pt"))
         custom_data_lag = torch.load(os.path.join(data_dir, "xyz-aligned-timelag.pt"))
         backbone_atom_data = custom_data[:, ALANINE_HEAVY_ATOM_IDX]
